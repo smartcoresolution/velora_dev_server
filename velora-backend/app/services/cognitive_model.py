@@ -385,10 +385,17 @@ def apply_linguistic_adjustment(cognitive_result: dict, linguistic_features: dic
     stt_weight = float(np.clip(stt_confidence if stt_confidence > 0 else 0.45, 0.25, 0.75))
 
     fluency_rate = fluency_markers / max(token_count, 1)
+    conversational_artifact = token_count >= 50 and semantic_impairment <= 0.12
+    effective_repeated_ratio = repeated_ratio
+    effective_fluency_rate = fluency_rate
+    if conversational_artifact:
+        effective_repeated_ratio = min(repeated_ratio, 0.045)
+        effective_fluency_rate = min(fluency_rate, 0.035)
+
     language_risk = np.clip(
         (1.0 - quality) * 0.55
-        + min(repeated_ratio * 2.5, 0.25)
-        + min(fluency_rate * 2.0, 0.20),
+        + min(effective_repeated_ratio * 2.5, 0.25)
+        + min(effective_fluency_rate * 2.0, 0.20),
         0.0,
         1.0,
     )
@@ -408,12 +415,32 @@ def apply_linguistic_adjustment(cognitive_result: dict, linguistic_features: dic
         and fluency_rate <= 0.035
         and semantic_impairment <= 0.18
     )
+    clear_normal_conversation = (
+        conversational_artifact
+        and semantic_severe == 0.0
+        and semantic_mild <= 0.08
+        and quality >= 0.58
+    )
+    neutral_phone_conversation = (
+        token_count >= 25
+        and semantic_impairment == 0.0
+        and semantic_severe == 0.0
+        and semantic_mild == 0.0
+        and semantic_normal <= 0.08
+        and quality >= 0.55
+    )
     if clear_normal_language and top_label != "AD":
         low_language_risk = 1.0 - float(np.clip(language_risk / 0.22, 0.0, 1.0))
         acoustic_uncertainty = float(np.clip((0.72 - top_probability) / 0.32, 0.0, 1.0))
         normal_delta += 0.35 * stt_weight * low_language_risk * acoustic_uncertainty
         if semantic_impairment == 0.0 and semantic_normal >= 0.20:
             normal_delta += 0.16 * stt_weight
+    elif clear_normal_conversation and top_label != "AD":
+        acoustic_uncertainty = float(np.clip((0.70 - top_probability) / 0.35, 0.0, 1.0))
+        normal_delta += 0.24 * stt_weight * acoustic_uncertainty
+    elif neutral_phone_conversation and top_label != "AD":
+        acoustic_uncertainty = float(np.clip((0.74 - top_probability) / 0.38, 0.25, 1.0))
+        normal_delta += 0.34 * stt_weight * acoustic_uncertainty
 
     if semantic_balance > 0:
         semantic_delta = min(0.38, semantic_balance * 0.42) * stt_weight
@@ -457,6 +484,8 @@ def apply_linguistic_adjustment(cognitive_result: dict, linguistic_features: dic
             "semantic_severe_score": round(float(semantic_severe), 4),
             "semantic_mild_score": round(float(semantic_mild), 4),
             "semantic_normal_score": round(float(semantic_normal), 4),
+            "conversational_artifact": conversational_artifact,
+            "neutral_phone_conversation": neutral_phone_conversation,
             "adjustment_strength": round(float(adjustment_strength), 4),
             "stt_weight": round(float(stt_weight), 4),
             "clear_normal_language": clear_normal_language,
