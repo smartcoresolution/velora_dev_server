@@ -26,6 +26,7 @@ export default function ResultsPage({ resultsData, onRestart, onReliability }: R
   }
 
   const analysis = resultsData.analysis as Record<string, unknown>
+  const isSelfVoice = resultsData.verification_type === 'self_voice'
   const probabilities = analysis.model_probabilities as Record<string, number>
 
   const probabilityRows = [
@@ -55,7 +56,7 @@ export default function ResultsPage({ resultsData, onRestart, onReliability }: R
           </div>
         </div>
         <p className="mt-2 text-[14px] font-bold leading-6 text-[#426160]">
-          부모님 음성에서 {topProbability.label} 신호가 가장 높게 관찰되었습니다.
+          {isSelfVoice ? '내 목소리' : '부모님 음성'}에서 {topProbability.label} 신호가 가장 높게 관찰되었습니다.
         </p>
         <p className="mt-2 text-[12px] leading-5 text-[#7d9593]">
           세부 확률과 신뢰도는 결과 신뢰도 보기에서 확인해 주세요.

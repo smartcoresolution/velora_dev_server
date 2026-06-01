@@ -20,6 +20,10 @@ const PATTERN_LABELS = {
   AD: { label: '치매 관련 위험 신호 높음', color: '#ef4444' },
 }
 
+function getVerificationLabel(item: Record<string, any>) {
+  return item.verification_type === 'self_voice' ? '내 목소리 검증' : '부모님 통화 검증'
+}
+
 function getPatternSummary(analysis: Record<string, any>) {
   const probabilities = analysis.model_probabilities || {}
   const rows = [
@@ -78,7 +82,7 @@ export default function HistoryPage({ items, onSelect, onRestart, onDelete }: Hi
         <section className="flex min-h-[620px] flex-col items-center justify-center rounded-[28px] bg-white p-6 text-center">
           <BarChart3 className="h-12 w-12 text-[#0f7d82]" />
           <p className="mt-4 text-[17px] font-black text-[#183f40]">지난 검증 이력이 없습니다</p>
-          <p className="mt-2 text-[12px] leading-5 text-[#7d9593]">새 검증을 완료하면 부모님 음성의 변화 이력이 이곳에 표시됩니다.</p>
+          <p className="mt-2 text-[12px] leading-5 text-[#7d9593]">새 검증을 완료하면 음성 변화 이력이 이곳에 표시됩니다.</p>
           <Button onClick={onRestart} className="mt-6 h-12 w-full rounded-full bg-[#0f7d82] text-white shadow-none">
             <RefreshCw className="mr-2 h-4 w-4" />
             다시 새로 검증
@@ -130,7 +134,7 @@ export default function HistoryPage({ items, onSelect, onRestart, onDelete }: Hi
                   <button onClick={() => onSelect(item)} className="min-w-0 flex-1 text-left">
                     <p className="text-[13px] font-black text-[#183f40]">{formatDate(checkedAt)}</p>
                     <p className="mt-1 text-[12px] leading-5 text-[#6f8785]">
-                      결과 신뢰도 {confidenceLabel} · {confidencePercent}%
+                      {getVerificationLabel(item)} · 결과 신뢰도 {confidenceLabel} · {confidencePercent}%
                     </p>
                   </button>
                   <div className="flex shrink-0 items-center gap-2">

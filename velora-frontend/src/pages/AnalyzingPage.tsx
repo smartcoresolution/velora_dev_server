@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { AudioWaveform, BarChart3, Brain, CheckCircle, Shield, Users } from 'lucide-react'
+import { AudioWaveform, BarChart3, Brain, CheckCircle, Shield, UserRound, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { startAnalysis, getResults } from '@/lib/api'
@@ -7,6 +7,7 @@ import { startAnalysis, getResults } from '@/lib/api'
 interface AnalyzingPageProps {
   fileId: string
   voiceSampleId: string
+  verificationType: 'parent_call' | 'self_voice'
   onComplete: (analysisId: string, analysisResult: Record<string, unknown>, resultsData: Record<string, unknown>) => void
   onBack: () => void
 }
@@ -19,11 +20,21 @@ const STEPS = [
   { icon: Shield, label: '리포트 생성', detail: '비의료적 참고 리포트를 정리합니다.' },
 ]
 
-export default function AnalyzingPage({ fileId, voiceSampleId, onComplete, onBack }: AnalyzingPageProps) {
+const SELF_STEPS = [
+  { icon: AudioWaveform, label: '음성 전처리', detail: '녹음 파일을 표준 음성으로 변환합니다.' },
+  { icon: UserRound, label: '본인 음성 확인', detail: '본인 발화의 길이와 품질을 확인합니다.' },
+  { icon: BarChart3, label: '음성 특징 분석', detail: '말 속도, 멈춤, 에너지 특징을 계산합니다.' },
+  { icon: Brain, label: '위험 신호 추론', detail: '인지기능 변화 관련 참고 신호를 산출합니다.' },
+  { icon: Shield, label: '리포트 생성', detail: '비의료적 참고 리포트를 정리합니다.' },
+]
+
+export default function AnalyzingPage({ fileId, voiceSampleId, verificationType, onComplete, onBack }: AnalyzingPageProps) {
   const [currentStep, setCurrentStep] = useState(0)
   const [progress, setProgress] = useState(0)
   const [error, setError] = useState('')
   const [analyzing, setAnalyzing] = useState(false)
+  const isSelfVoice = verificationType === 'self_voice'
+  const steps = isSelfVoice ? SELF_STEPS : STEPS
 
   useEffect(() => {
     if (analyzing) return
@@ -31,7 +42,7 @@ export default function AnalyzingPage({ fileId, voiceSampleId, onComplete, onBac
 
     const progressInterval = window.setInterval(() => {
       setProgress(prev => Math.min(90, prev + 7))
-      setCurrentStep(prev => Math.min(STEPS.length - 1, prev + (Math.random() > 0.55 ? 1 : 0)))
+      setCurrentStep(prev => Math.min(steps.length - 1, prev + (Math.random() > 0.55 ? 1 : 0)))
     }, 750)
 
     const doAnalysis = async () => {
@@ -39,7 +50,7 @@ export default function AnalyzingPage({ fileId, voiceSampleId, onComplete, onBac
         const analysisResult = await startAnalysis(fileId, voiceSampleId || undefined)
         window.clearInterval(progressInterval)
         setProgress(95)
-        setCurrentStep(STEPS.length - 1)
+        setCurrentStep(steps.length - 1)
 
         const resultsData = await getResults(analysisResult.analysis_id)
         setProgress(100)
@@ -54,7 +65,7 @@ export default function AnalyzingPage({ fileId, voiceSampleId, onComplete, onBac
 
     doAnalysis()
     return () => window.clearInterval(progressInterval)
-  }, [fileId, voiceSampleId, onComplete, analyzing])
+  }, [fileId, voiceSampleId, onComplete, analyzing, steps.length])
 
   if (error) {
     return (
@@ -81,13 +92,15 @@ export default function AnalyzingPage({ fileId, voiceSampleId, onComplete, onBac
             <Brain className="h-11 w-11" />
           </div>
         </div>
-        <p className="mt-7 text-center text-[23px] font-black">통화 음성 분석 중</p>
+        <p className="mt-7 text-center text-[23px] font-black">{isSelfVoice ? '내 목소리 분석 중' : '통화 음성 분석 중'}</p>
         <p className="mt-2 text-center text-[13px] leading-5 text-white/75">
-          자녀 음성을 제외하고 부모님 음성의 위험 신호 리포트를 준비하고 있습니다.
+          {isSelfVoice
+            ? '본인 음성의 위험 신호 참고 리포트를 준비하고 있습니다.'
+            : '자녀 음성을 제외하고 부모님 음성의 위험 신호 리포트를 준비하고 있습니다.'}
         </p>
         <div className="mt-7 space-y-2">
           <div className="flex justify-between text-[12px] font-bold text-white/80">
-            <span>{STEPS[currentStep].label}</span>
+            <span>{steps[currentStep].label}</span>
             <span>{Math.round(progress)}%</span>
           </div>
           <Progress value={progress} className="h-2 bg-white/20" />
@@ -95,7 +108,7 @@ export default function AnalyzingPage({ fileId, voiceSampleId, onComplete, onBac
       </div>
 
       <div className="mt-5 space-y-3">
-        {STEPS.map((step, idx) => {
+        {steps.map((step, idx) => {
           const Icon = step.icon
           const isActive = idx === currentStep
           const isDone = idx < currentStep || progress >= 100

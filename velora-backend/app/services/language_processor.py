@@ -28,6 +28,11 @@ def extract_linguistic_features(transcript_text: str | None) -> dict:
             "fluency_marker_count": 0,
             "figurative_expression_count": 0,
             "language_quality_score": 0.0,
+            "token_count": 0,
+            "stt_available": False,
+            "stt_engine": "none",
+            "stt_confidence": 0.0,
+            "transcript_char_count": 0,
             "extraction_note": "전사 텍스트가 제공되지 않아 언어 특징은 산출하지 않았습니다.",
         }
 
@@ -64,5 +69,10 @@ def extract_linguistic_features(transcript_text: str | None) -> dict:
         "fluency_marker_count": int(fluency_marker_count),
         "figurative_expression_count": int(figurative_expression_count),
         "language_quality_score": round(float(language_quality_score), 4),
+        "token_count": int(token_count),
+        "stt_available": True,
+        "stt_engine": "provided_or_auto",
+        "stt_confidence": 0.0,
+        "transcript_char_count": len(normalized),
         "extraction_note": "제공된 전사 텍스트에서 휴리스틱 언어 특징을 산출했습니다.",
     }

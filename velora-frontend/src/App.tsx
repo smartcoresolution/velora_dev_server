@@ -6,6 +6,7 @@ import LoginPage from './pages/LoginPage'
 import ServiceMenuPage from './pages/ServiceMenuPage'
 import ConsentPage from './pages/ConsentPage'
 import UploadPage from './pages/UploadPage'
+import SelfVoicePage from './pages/SelfVoicePage'
 import AnalyzingPage from './pages/AnalyzingPage'
 import ResultsPage from './pages/ResultsPage'
 import ReliabilityPage from './pages/ReliabilityPage'
@@ -21,6 +22,7 @@ export type AppStep =
   | 'service'
   | 'consent'
   | 'upload'
+  | 'selfVoice'
   | 'analyzing'
   | 'results'
   | 'reliability'
@@ -29,6 +31,8 @@ export type AppStep =
   | 'adminLogin'
   | 'admin'
 
+export type VerificationType = 'parent_call' | 'self_voice'
+
 export interface AppState {
   consentToken: string
   email: string
@@ -36,6 +40,7 @@ export interface AppState {
   fileId: string
   voiceSampleId: string
   voiceSampleDurationSeconds: number
+  verificationType: VerificationType
   analysisId: string
   analysisResult: Record<string, unknown> | null
   resultsData: Record<string, unknown> | null
@@ -56,6 +61,7 @@ const initialState: AppState = {
   fileId: '',
   voiceSampleId: '',
   voiceSampleDurationSeconds: 0,
+  verificationType: 'parent_call',
   analysisId: '',
   analysisResult: null,
   resultsData: null,
@@ -73,6 +79,7 @@ const historyKeyFor = (email: string) => `velora_history:${email.trim().toLowerC
 
 const historySignature = (item: Record<string, any>) => {
   const analysis = item.analysis as Record<string, any> | undefined
+  const verificationType = item.verification_type || 'parent_call'
   const savedAt = item.saved_at || item.created_at || analysis?.created_at || ''
   const date = new Date(String(savedAt))
   const minute = Number.isNaN(date.getTime()) ? '' : date.toISOString().slice(0, 16)
@@ -81,7 +88,7 @@ const historySignature = (item: Record<string, any>) => {
   const normal = Math.round(Number(probabilities.Normal || 0) * 100)
   const mci = Math.round(Number(probabilities.MCI || 0) * 100)
   const ad = Math.round(Number(probabilities.AD || 0) * 100)
-  return `${minute}:${confidence}:${normal}:${mci}:${ad}`
+  return `${verificationType}:${minute}:${confidence}:${normal}:${mci}:${ad}`
 }
 
 const normalizeHistory = (items: Array<Record<string, any>>) => {
@@ -163,8 +170,9 @@ function App() {
     }
   }
 
-  const resetCurrentAnalysis = () => {
+  const resetCurrentAnalysis = (verificationType: VerificationType = 'parent_call') => {
     updateState({
+      verificationType,
       fileId: '',
       voiceSampleId: '',
       voiceSampleDurationSeconds: 0,
@@ -173,7 +181,7 @@ function App() {
       resultsData: null,
     })
     if (state.consentToken) {
-      setStep('upload')
+      setStep(verificationType === 'self_voice' ? 'selfVoice' : 'upload')
       return
     }
     setConsentBackStep('service')
@@ -203,8 +211,7 @@ function App() {
     setIsMember(true)
     setHistory(loadHistoryFor(state.email))
     updateState({ signupPassword: '', signupPasswordConfirm: '', signupError: '' })
-    setConsentBackStep('signup')
-    setStep('consent')
+    setStep('service')
   }
 
   const handleLogin = () => {
@@ -252,7 +259,8 @@ function App() {
     if (step === 'service') setStep('login')
     if (step === 'consent') setStep(consentBackStep)
     if (step === 'upload') setStep('service')
-    if (step === 'analyzing') setStep('upload')
+    if (step === 'selfVoice') setStep('service')
+    if (step === 'analyzing') setStep(state.verificationType === 'self_voice' ? 'selfVoice' : 'upload')
     if (step === 'results') setStep(resultsBackStep)
     if (step === 'reliability') setStep('results')
     if (step === 'followup') setStep('results')
@@ -268,6 +276,7 @@ function App() {
     service: '서비스 시작',
     consent: '동의 절차',
     upload: '새 검증',
+    selfVoice: '내 목소리 검증',
     analyzing: '통화 음성 분석',
     results: '검증 결과',
     reliability: '결과 신뢰도',
@@ -320,7 +329,7 @@ function App() {
               </div>
               <div className="flex flex-1 flex-col items-center justify-center text-center">
                 <p className="text-[34px] font-black tracking-tight text-[#0c7478]">VELORA</p>
-                <p className="mt-2 text-[15px] font-semibold text-[#255a5b]">부모님 통화 속 인지 변화 신호</p>
+                <p className="mt-2 text-[15px] font-semibold text-[#255a5b]">목소리 속 인지 변화 참고 신호</p>
 
                 <div className="mt-12 flex h-36 w-36 items-center justify-center rounded-full bg-[#d7efea]">
                   <div className="flex h-28 w-28 items-center justify-center rounded-full bg-[#15908e] shadow-lg shadow-teal-800/20">
@@ -329,7 +338,7 @@ function App() {
                 </div>
 
                 <p className="mt-10 whitespace-pre-line text-[15px] font-semibold leading-7 text-[#255a5b]">
-                  자연스러운 부모님과의 통화에서{'\n'}자녀 음성을 제외하고{'\n'}인지 저하 위험 신호를 살펴봅니다.
+                  부모님과의 통화 또는 내 목소리에서{'\n'}인지기능 변화와 관련된{'\n'}참고 신호를 살펴봅니다.
                 </p>
               </div>
 
@@ -371,7 +380,8 @@ function App() {
 
           {step === 'service' && (
             <ServiceMenuPage
-              onNewAnalysis={resetCurrentAnalysis}
+              onParentCall={() => resetCurrentAnalysis('parent_call')}
+              onSelfVoice={() => resetCurrentAnalysis('self_voice')}
               onHistory={() => {
                 setHistoryBackStep('service')
                 setStep('history')
@@ -384,7 +394,7 @@ function App() {
               ageGroup={state.ageGroup}
               onComplete={(token, ageGroup) => {
                 updateState({ consentToken: token, ageGroup })
-                setStep('upload')
+                setStep(state.verificationType === 'self_voice' ? 'selfVoice' : 'upload')
               }}
             />
           )}
@@ -394,6 +404,7 @@ function App() {
               items={history}
               onSelect={item => {
                 updateState({
+                  verificationType: item.verification_type === 'self_voice' ? 'self_voice' : 'parent_call',
                   analysisId: String(item.analysis?.analysis_id || ''),
                   analysisResult: item.analysis || null,
                   resultsData: item,
@@ -401,7 +412,7 @@ function App() {
                 setResultsBackStep('history')
                 setStep('results')
               }}
-              onRestart={resetCurrentAnalysis}
+              onRestart={() => setStep('service')}
               onDelete={deleteHistoryItem}
             />
           )}
@@ -417,13 +428,31 @@ function App() {
             />
           )}
 
+          {step === 'selfVoice' && (
+            <SelfVoicePage
+              consentToken={state.consentToken}
+              onComplete={(fileId, durationSeconds) => {
+                updateState({
+                  fileId,
+                  voiceSampleId: '',
+                  voiceSampleDurationSeconds: durationSeconds,
+                  verificationType: 'self_voice',
+                })
+                setStep('analyzing')
+              }}
+              onBack={() => setStep('service')}
+            />
+          )}
+
           {step === 'analyzing' && (
             <AnalyzingPage
               fileId={state.fileId}
               voiceSampleId={state.voiceSampleId}
+              verificationType={state.verificationType}
               onComplete={(analysisId, analysisResult, resultsData) => {
                 const enrichedResultsData = {
                   ...resultsData,
+                  verification_type: state.verificationType,
                   voice_sample: {
                     ...((resultsData.voice_sample as Record<string, unknown> | undefined) || {}),
                     duration_seconds: state.voiceSampleDurationSeconds,
@@ -431,17 +460,17 @@ function App() {
                 }
                 updateState({ analysisId, analysisResult, resultsData: enrichedResultsData })
                 saveHistory(enrichedResultsData)
-                setResultsBackStep('upload')
+                setResultsBackStep(state.verificationType === 'self_voice' ? 'selfVoice' : 'upload')
                 setStep('results')
               }}
-              onBack={() => setStep('upload')}
+              onBack={() => setStep(state.verificationType === 'self_voice' ? 'selfVoice' : 'upload')}
             />
           )}
 
           {step === 'results' && (
             <ResultsPage
               resultsData={state.resultsData}
-              onRestart={resetCurrentAnalysis}
+              onRestart={() => resetCurrentAnalysis(state.verificationType)}
               onReliability={() => setStep('reliability')}
             />
           )}

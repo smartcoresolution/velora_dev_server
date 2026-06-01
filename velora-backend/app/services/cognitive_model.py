@@ -10,6 +10,8 @@ CPU_ONLY_VALUES = {"1", "true", "yes", "on"}
 CPU_ONLY_DEFAULT = "true"
 LIGHTWEIGHT_ENV = "VELORA_LIGHTWEIGHT_INFERENCE"
 LIGHTWEIGHT_DEFAULT = "false"
+TRAINED_MODEL_IN_LIGHTWEIGHT_ENV = "VELORA_USE_TRAINED_MODEL_IN_LIGHTWEIGHT"
+TRAINED_MODEL_IN_LIGHTWEIGHT_DEFAULT = "true"
 
 os.environ.setdefault("MPLCONFIGDIR", "/tmp/mplconfig")
 os.environ.setdefault("NUMBA_CACHE_DIR", "/tmp/numba_cache")
@@ -77,6 +79,13 @@ def _cpu_only_enabled() -> bool:
 
 def _lightweight_enabled() -> bool:
     return os.getenv(LIGHTWEIGHT_ENV, LIGHTWEIGHT_DEFAULT).strip().lower() in CPU_ONLY_VALUES
+
+
+def _trained_model_in_lightweight_enabled() -> bool:
+    return os.getenv(
+        TRAINED_MODEL_IN_LIGHTWEIGHT_ENV,
+        TRAINED_MODEL_IN_LIGHTWEIGHT_DEFAULT,
+    ).strip().lower() in CPU_ONLY_VALUES
 
 
 def _configure_tensorflow_runtime(tf: Any) -> dict[str, Any]:
@@ -310,6 +319,25 @@ def _probabilities_from_audio_features(audio_path: str) -> dict[str, float]:
     }
 
 
+def _predict_with_trained_model(audio_path: str) -> dict:
+    bundle = _load_model_bundle()
+    array = _audio_to_array(
+        audio_path,
+        bundle["sample_rate"],
+        bundle["seconds"],
+        bundle["image_size"],
+        bundle["dpi"],
+    )
+
+    probability_map = _predict_probabilities(bundle["model"], array, bundle["class_names"])
+    return _result_from_probabilities(
+        probability_map,
+        model_source="normal_mci_ad_task_ALL_vgg16_h5",
+        model_path=bundle["model_path"],
+        metadata_path=bundle["metadata_path"],
+    )
+
+
 def _result_from_probabilities(probability_map: dict[str, float], model_source: str, model_path: str | None = None, metadata_path: str | None = None) -> dict:
     predicted_label = max(probability_map, key=probability_map.get)
     impairment_probability = probability_map["MCI"] + probability_map["AD"]
@@ -340,30 +368,75 @@ def _result_from_probabilities(probability_map: dict[str, float], model_source: 
     }
 
 
+def apply_linguistic_adjustment(cognitive_result: dict, linguistic_features: dict) -> dict:
+    if not linguistic_features.get("transcript_available"):
+        return cognitive_result
+
+    probabilities = cognitive_result["model_probabilities"]
+    quality = float(linguistic_features.get("language_quality_score", 0.0))
+    repeated_ratio = float(linguistic_features.get("repeated_word_ratio", 0.0))
+    token_count = int(linguistic_features.get("token_count", 0))
+    fluency_markers = int(linguistic_features.get("fluency_marker_count", 0))
+    stt_confidence = float(linguistic_features.get("stt_confidence", 0.0) or 0.0)
+    stt_weight = float(np.clip(stt_confidence if stt_confidence > 0 else 0.45, 0.25, 0.75))
+
+    fluency_rate = fluency_markers / max(token_count, 1)
+    language_risk = np.clip(
+        (1.0 - quality) * 0.55
+        + min(repeated_ratio * 2.5, 0.25)
+        + min(fluency_rate * 2.0, 0.20),
+        0.0,
+        1.0,
+    )
+    adjustment_strength = 0.18 * stt_weight
+    mci_delta = adjustment_strength * language_risk * 0.65
+    ad_delta = adjustment_strength * max(0.0, language_risk - 0.45) * 0.35
+    normal_delta = adjustment_strength * max(0.0, quality - 0.72) * 0.55
+
+    adjusted = {
+        "Normal": max(0.03, probabilities["Normal"] + normal_delta - mci_delta - ad_delta),
+        "MCI": max(0.03, probabilities["MCI"] + mci_delta - normal_delta * 0.55),
+        "AD": max(0.03, probabilities["AD"] + ad_delta - normal_delta * 0.45),
+    }
+    total = sum(adjusted.values())
+    adjusted = {key: value / total for key, value in adjusted.items()}
+
+    result = _result_from_probabilities(
+        adjusted,
+        model_source=f"{cognitive_result['model_source']}+stt_linguistic",
+        model_path=cognitive_result.get("model_path"),
+        metadata_path=cognitive_result.get("metadata_path"),
+    )
+    return {
+        **result,
+        "acoustic_model_probabilities": cognitive_result["model_probabilities"],
+        "linguistic_adjustment": {
+            "language_risk_score": round(float(language_risk), 4),
+            "adjustment_strength": round(float(adjustment_strength), 4),
+            "stt_weight": round(float(stt_weight), 4),
+        },
+    }
+
+
 def predict_cognitive_status(audio_path: str) -> dict:
     if _lightweight_enabled():
+        if _trained_model_in_lightweight_enabled():
+            try:
+                result = _predict_with_trained_model(audio_path)
+                return {
+                    **result,
+                    "model_source": "normal_mci_ad_task_ALL_vgg16_h5_lightweight_pipeline",
+                }
+            except Exception:
+                pass
+
         probability_map = _probabilities_from_audio_features(audio_path)
         return _result_from_probabilities(
             probability_map,
-            model_source="lightweight_acoustic_screening",
+            model_source="lightweight_acoustic_screening_fallback",
         )
 
-    bundle = _load_model_bundle()
-    array = _audio_to_array(
-        audio_path,
-        bundle["sample_rate"],
-        bundle["seconds"],
-        bundle["image_size"],
-        bundle["dpi"],
-    )
-
-    probability_map = _predict_probabilities(bundle["model"], array, bundle["class_names"])
-    return _result_from_probabilities(
-        probability_map,
-        model_source="normal_mci_ad_task_ALL_vgg16_h5",
-        model_path=bundle["model_path"],
-        metadata_path=bundle["metadata_path"],
-    )
+    return _predict_with_trained_model(audio_path)
 
 
 def get_model_status() -> dict:

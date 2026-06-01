@@ -17,9 +17,11 @@ from app.services.feature_extractor import (
     compute_feature_quality,
 )
 from app.services.language_processor import extract_linguistic_features
+from app.services.stt_processor import transcribe_audio
 from app.services.risk_model import compute_confidence_score
 from app.services.cognitive_model import (
     CognitiveModelUnavailable,
+    apply_linguistic_adjustment,
     get_model_status,
     predict_cognitive_status,
 )
@@ -184,16 +186,39 @@ async def start_analysis(
         acoustic_features = extract_acoustic_features(target_audio, TARGET_SR)
     _trace_analysis("acoustic features done")
 
-    # Step 5: Extract linguistic features when transcript text is provided
-    linguistic_features = extract_linguistic_features(transcript_text)
+    # Step 5: STT transcription and linguistic feature extraction
+    stt_result = {
+        "transcript_text": transcript_text,
+        "stt_available": bool((transcript_text or "").strip()),
+        "stt_engine": "provided",
+        "stt_confidence": 1.0 if (transcript_text or "").strip() else 0.0,
+        "transcript_char_count": len((transcript_text or "").strip()),
+        "stt_language": "provided",
+        "stt_note": "요청에서 제공된 전사 텍스트를 사용했습니다." if (transcript_text or "").strip() else "",
+    }
+    if not (transcript_text or "").strip():
+        _trace_analysis("stt start")
+        stt_result = transcribe_audio(target_audio_path)
+        _trace_analysis(f"stt done available={stt_result['stt_available']}")
+    linguistic_features = extract_linguistic_features(stt_result.get("transcript_text"))
+    linguistic_features = {
+        **linguistic_features,
+        "stt_available": bool(stt_result.get("stt_available")),
+        "stt_engine": str(stt_result.get("stt_engine") or "none"),
+        "stt_confidence": float(stt_result.get("stt_confidence") or 0.0),
+        "transcript_char_count": int(stt_result.get("transcript_char_count") or 0),
+        "stt_language": str(stt_result.get("stt_language") or ""),
+        "stt_note": str(stt_result.get("stt_note") or ""),
+    }
 
     # Step 6: Compute feature quality
     feature_quality = compute_feature_quality(acoustic_features, speech_stats)
 
-    # Step 7: Run trained Normal/MCI/AD model
+    # Step 7: Run trained Normal/MCI/AD model and apply STT linguistic signal
     try:
         _trace_analysis("cognitive prediction start")
         cognitive_result = predict_cognitive_status(target_audio_path)
+        cognitive_result = apply_linguistic_adjustment(cognitive_result, linguistic_features)
         _trace_analysis("cognitive prediction done")
     except CognitiveModelUnavailable as exc:
         raise HTTPException(
@@ -251,6 +276,8 @@ async def start_analysis(
         risk_level_label=cognitive_result["risk_level_label"],
         risk_probability=cognitive_result["risk_probability"],
         model_probabilities=cognitive_result["model_probabilities"],
+        acoustic_model_probabilities=cognitive_result.get("acoustic_model_probabilities"),
+        linguistic_adjustment=cognitive_result.get("linguistic_adjustment"),
         result_message=cognitive_result["result_message"],
         model_source=cognitive_result["model_source"],
         confidence_score=confidence_result["overall"],
@@ -281,6 +308,10 @@ async def start_analysis(
             "third_party_voice_handling": "speaker_diarization_excluded_segments_not_used_for_model",
             "non_medical_disclaimer_present": True,
             "transcript_available": linguistic_features["transcript_available"],
+            "stt_available": linguistic_features["stt_available"],
+            "stt_engine": linguistic_features["stt_engine"],
+            "stt_confidence": linguistic_features["stt_confidence"],
+            "transcript_char_count": linguistic_features["transcript_char_count"],
         },
         processing_time_seconds=round(processing_time, 2),
         disclaimer=disclaimer,

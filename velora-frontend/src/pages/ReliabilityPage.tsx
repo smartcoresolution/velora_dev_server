@@ -1,4 +1,4 @@
-import { Activity, CheckCircle, PhoneCall, ShieldCheck, UserRoundMinus } from 'lucide-react'
+import { Activity, CheckCircle, PhoneCall, ShieldCheck, UserRound, UserRoundMinus } from 'lucide-react'
 
 interface ReliabilityPageProps {
   resultsData: Record<string, unknown> | null
@@ -12,10 +12,12 @@ const PROBABILITY_LABELS = {
 
 export default function ReliabilityPage({ resultsData }: ReliabilityPageProps) {
   const analysis = resultsData?.analysis as Record<string, unknown> | undefined
+  const isSelfVoice = resultsData?.verification_type === 'self_voice'
   const voiceSample = resultsData?.voice_sample as Record<string, unknown> | undefined
   const probabilities = analysis?.model_probabilities as Record<string, number> | undefined
   const features = analysis?.features as Record<string, any> | undefined
   const speechStats = features?.speech_statistics as Record<string, number> | undefined
+  const linguistic = features?.linguistic_features as Record<string, any> | undefined
   const confidenceBreakdown = analysis?.confidence_breakdown as Record<string, number> | undefined
   const confidenceScore = Number(analysis?.confidence_score || 0)
   const parentSpeechSeconds = Number(speechStats?.total_speech_duration || 0)
@@ -27,12 +29,16 @@ export default function ReliabilityPage({ resultsData }: ReliabilityPageProps) {
     return '미흡'
   }
 
-  const parentSpeechLabel = parentSpeechSeconds > 0 ? `${parentSpeechSeconds.toFixed(1)}초` : '확인 필요'
+  const speechLabel = parentSpeechSeconds > 0 ? `${parentSpeechSeconds.toFixed(1)}초` : '확인 필요'
   const voiceSampleSeconds = Number(voiceSample?.duration_seconds || 0)
   const voiceSampleLabel = voiceSampleSeconds > 0 ? `${voiceSampleSeconds.toFixed(1)}초` : '20초 이상 권장'
   const callQualityLabel = toQualityLabel(audioQualityScore)
   const reliabilityLabel = toQualityLabel(confidenceScore)
-  const parentSpeechStatus = parentSpeechSeconds >= 30 ? '양호' : parentSpeechSeconds > 0 ? '보통' : '미흡'
+  const languageQuality = Number(linguistic?.language_quality_score || 0)
+  const languageQualityLabel = linguistic?.transcript_available ? toQualityLabel(languageQuality) : '미사용'
+  const sttEngine = String(linguistic?.stt_engine || 'none')
+  const sttConfidence = Math.round(Number(linguistic?.stt_confidence || 0) * 100)
+  const speechStatus = parentSpeechSeconds >= 30 ? '양호' : parentSpeechSeconds > 0 ? '보통' : '미흡'
   const probabilityRows = [
     { name: 'Normal', value: Math.round(Number(probabilities?.Normal || 0) * 100), ...PROBABILITY_LABELS.Normal },
     { name: 'MCI', value: Math.round(Number(probabilities?.MCI || 0) * 100), ...PROBABILITY_LABELS.MCI },
@@ -49,7 +55,9 @@ export default function ReliabilityPage({ resultsData }: ReliabilityPageProps) {
         </div>
         <p className="mt-5 text-[21px] font-black text-[#183f40]">결과 신뢰도</p>
         <p className="mt-2 text-[12px] leading-5 text-[#607b79]">
-          부모 발화량, 자녀 음성 기준, 통화 품질을 기준으로 이번 결과를 얼마나 참고할 수 있는지 보여줍니다.
+          {isSelfVoice
+            ? '본인 발화량과 녹음 품질을 기준으로 이번 결과를 얼마나 참고할 수 있는지 보여줍니다.'
+            : '부모 발화량, 자녀 음성 기준, 통화 품질을 기준으로 이번 결과를 얼마나 참고할 수 있는지 보여줍니다.'}
         </p>
       </section>
 
@@ -84,20 +92,37 @@ export default function ReliabilityPage({ resultsData }: ReliabilityPageProps) {
 
       <section className="space-y-3">
         <div className="flex items-start gap-3 rounded-2xl border border-[#e3ece9] bg-white p-4">
-          <PhoneCall className="mt-0.5 h-5 w-5 shrink-0 text-[#0f7d82]" />
+          {isSelfVoice ? (
+            <UserRound className="mt-0.5 h-5 w-5 shrink-0 text-[#0f7d82]" />
+          ) : (
+            <PhoneCall className="mt-0.5 h-5 w-5 shrink-0 text-[#0f7d82]" />
+          )}
           <div>
-            <p className="text-[13px] font-black text-[#183f40]">부모 발화량: {parentSpeechStatus}</p>
+            <p className="text-[13px] font-black text-[#183f40]">{isSelfVoice ? '본인 발화량' : '부모 발화량'}: {speechStatus}</p>
             <p className="mt-1 text-[12px] leading-5 text-[#607b79]">
-              이번 분석에 사용된 부모님 발화량은 {parentSpeechLabel}입니다. 부모님 음성이 30초 이상 포함되면 결과를 더 안정적으로 참고할 수 있습니다.
+              이번 분석에 사용된 {isSelfVoice ? '본인 발화량' : '부모님 발화량'}은 {speechLabel}입니다. 음성이 30초 이상 포함되면 결과를 더 안정적으로 참고할 수 있습니다.
             </p>
           </div>
         </div>
+        {!isSelfVoice && (
+          <div className="flex items-start gap-3 rounded-2xl border border-[#e3ece9] bg-white p-4">
+            <UserRoundMinus className="mt-0.5 h-5 w-5 shrink-0 text-[#0f7d82]" />
+            <div>
+              <p className="text-[13px] font-black text-[#183f40]">자녀 음성 기준: {voiceSampleLabel}</p>
+              <p className="mt-1 text-[12px] leading-5 text-[#607b79]">
+                등록한 자녀 음성은 통화 속 자녀 목소리를 구분하는 기준으로 사용됩니다.
+              </p>
+            </div>
+          </div>
+        )}
         <div className="flex items-start gap-3 rounded-2xl border border-[#e3ece9] bg-white p-4">
-          <UserRoundMinus className="mt-0.5 h-5 w-5 shrink-0 text-[#0f7d82]" />
+          <Activity className="mt-0.5 h-5 w-5 shrink-0 text-[#0f7d82]" />
           <div>
-            <p className="text-[13px] font-black text-[#183f40]">자녀 음성 기준: {voiceSampleLabel}</p>
+            <p className="text-[13px] font-black text-[#183f40]">언어 보조 신호: {languageQualityLabel}</p>
             <p className="mt-1 text-[12px] leading-5 text-[#607b79]">
-              등록한 자녀 음성은 통화 속 자녀 목소리를 구분하는 기준으로 사용됩니다.
+              {linguistic?.transcript_available
+                ? `STT(${sttEngine})로 전사한 텍스트에서 어휘 다양성, 반복 표현, 머뭇거림 신호를 함께 확인했습니다. STT 신뢰도는 ${sttConfidence}%입니다.`
+                : 'STT 전사가 아직 제공되지 않아 이번 결과에는 언어 보조 신호가 반영되지 않았습니다.'}
             </p>
           </div>
         </div>
@@ -106,7 +131,7 @@ export default function ReliabilityPage({ resultsData }: ReliabilityPageProps) {
           <div>
             <p className="text-[13px] font-black text-[#183f40]">통화 품질: {callQualityLabel}</p>
             <p className="mt-1 text-[12px] leading-5 text-[#607b79]">
-              주변 소음이 적고 부모님 목소리가 분명할수록 결과 신뢰도가 높아집니다. 이번 결과 신뢰도는 {reliabilityLabel}입니다.
+              주변 소음이 적고 {isSelfVoice ? '내 목소리' : '부모님 목소리'}가 분명할수록 결과 신뢰도가 높아집니다. 이번 결과 신뢰도는 {reliabilityLabel}입니다.
             </p>
           </div>
         </div>

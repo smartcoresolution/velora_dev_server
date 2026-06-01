@@ -102,6 +102,13 @@ class LinguisticFeatures(BaseModel):
     fluency_marker_count: int
     figurative_expression_count: int
     language_quality_score: float
+    token_count: int = 0
+    stt_available: bool = False
+    stt_engine: str = "none"
+    stt_confidence: float = 0.0
+    transcript_char_count: int = 0
+    stt_language: str = ""
+    stt_note: str = ""
     extraction_note: str
 
 
@@ -135,6 +142,8 @@ class AnalysisResult(BaseModel):
     risk_level_label: str = Field(..., description="사용자 표시용 위험도 라벨")
     risk_probability: float = Field(..., description="위험 경향성 확률 (0-1)")
     model_probabilities: ModelProbabilities
+    acoustic_model_probabilities: Optional[ModelProbabilities] = None
+    linguistic_adjustment: Optional[dict] = None
     result_message: str
     model_source: str
     confidence_score: float = Field(..., description="종합 신뢰도 (0-1)")

@@ -1,12 +1,13 @@
-import { BarChart3, ChevronRight, PhoneCall, RefreshCw, ShieldCheck } from 'lucide-react'
+import { BarChart3, ChevronRight, Mic, PhoneCall, ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 interface ServiceMenuPageProps {
-  onNewAnalysis: () => void
+  onParentCall: () => void
+  onSelfVoice: () => void
   onHistory: () => void
 }
 
-export default function ServiceMenuPage({ onNewAnalysis, onHistory }: ServiceMenuPageProps) {
+export default function ServiceMenuPage({ onParentCall, onSelfVoice, onHistory }: ServiceMenuPageProps) {
   return (
     <div className="space-y-5 pt-2">
       <section className="rounded-[30px] bg-white px-5 py-7 text-center shadow-sm shadow-teal-950/5">
@@ -17,17 +18,26 @@ export default function ServiceMenuPage({ onNewAnalysis, onHistory }: ServiceMen
         </div>
         <p className="mt-5 text-[22px] font-black text-[#183f40]">서비스 시작</p>
         <p className="mt-2 text-[12px] leading-5 text-[#607b79]">
-          새 통화 녹음을 검증하거나 이전 검증 결과를 확인할 수 있습니다.
+          부모님 통화 또는 내 목소리를 선택해 새 검증을 시작할 수 있습니다.
         </p>
       </section>
 
       <section className="space-y-3">
         <Button
-          onClick={onNewAnalysis}
+          onClick={onParentCall}
           className="h-14 w-full rounded-full bg-[#0f7d82] text-[15px] font-black text-white shadow-none hover:bg-[#0b6f74]"
         >
-          <RefreshCw className="mr-2 h-4 w-4" />
-          새 검증 시작
+          <PhoneCall className="mr-2 h-4 w-4" />
+          부모님 통화 검증
+        </Button>
+
+        <Button
+          onClick={onSelfVoice}
+          variant="outline"
+          className="h-14 w-full rounded-full border-[#dce9e6] bg-white text-[15px] font-black text-[#0f7d82] shadow-none hover:bg-[#f4faf8]"
+        >
+          <Mic className="mr-2 h-4 w-4" />
+          내 목소리 검증
         </Button>
 
         <button
