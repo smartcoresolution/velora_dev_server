@@ -6,6 +6,10 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
 
 
+def is_database_configured() -> bool:
+    return bool(os.getenv("DATABASE_URL", "").strip())
+
+
 @lru_cache(maxsize=1)
 def get_engine() -> Engine:
     database_url = os.getenv("DATABASE_URL", "").strip()
@@ -15,18 +19,24 @@ def get_engine() -> Engine:
 
 
 def fetch_one(query: str, params: dict[str, Any] | None = None) -> dict[str, Any] | None:
+    if not is_database_configured():
+        return None
     with get_engine().begin() as conn:
         row = conn.execute(text(query), params or {}).mappings().first()
         return dict(row) if row else None
 
 
 def fetch_all(query: str, params: dict[str, Any] | None = None) -> list[dict[str, Any]]:
+    if not is_database_configured():
+        return []
     with get_engine().begin() as conn:
         rows = conn.execute(text(query), params or {}).mappings().all()
         return [dict(row) for row in rows]
 
 
 def execute(query: str, params: dict[str, Any] | None = None) -> None:
+    if not is_database_configured():
+        return
     with get_engine().begin() as conn:
         conn.execute(text(query), params or {})
 

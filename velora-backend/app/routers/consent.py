@@ -41,46 +41,50 @@ async def submit_consent(request: ConsentRequest):
             "third_party_voice": request.third_party_voice_agreed,
         },
     }
-    db_row = insert_returning(
-        """
-        WITH new_user AS (
-            INSERT INTO users (user_name, age_group)
-            VALUES (:user_name, :age_group)
-            RETURNING id
+    try:
+        db_row = insert_returning(
+            """
+            WITH new_user AS (
+                INSERT INTO users (user_name, age_group)
+                VALUES (:user_name, :age_group)
+                RETURNING id
+            )
+            INSERT INTO consents (
+                user_id,
+                consent_token,
+                policy_version,
+                data_collection_agreed,
+                privacy_policy_agreed,
+                non_medical_disclaimer_agreed,
+                third_party_voice_agreed
+            )
+            SELECT
+                id,
+                CAST(:consent_token AS uuid),
+                :policy_version,
+                :data_collection_agreed,
+                :privacy_policy_agreed,
+                :non_medical_disclaimer_agreed,
+                :third_party_voice_agreed
+            FROM new_user
+            RETURNING id, user_id
+            """,
+            {
+                "user_name": normalized_name,
+                "age_group": request.age_group.value,
+                "consent_token": consent_token,
+                "policy_version": POLICY_VERSION,
+                "data_collection_agreed": request.data_collection_agreed,
+                "privacy_policy_agreed": request.privacy_policy_agreed,
+                "non_medical_disclaimer_agreed": request.non_medical_disclaimer_agreed,
+                "third_party_voice_agreed": request.third_party_voice_agreed,
+            },
         )
-        INSERT INTO consents (
-            user_id,
-            consent_token,
-            policy_version,
-            data_collection_agreed,
-            privacy_policy_agreed,
-            non_medical_disclaimer_agreed,
-            third_party_voice_agreed
-        )
-        SELECT
-            id,
-            CAST(:consent_token AS uuid),
-            :policy_version,
-            :data_collection_agreed,
-            :privacy_policy_agreed,
-            :non_medical_disclaimer_agreed,
-            :third_party_voice_agreed
-        FROM new_user
-        RETURNING id, user_id
-        """,
-        {
-            "user_name": normalized_name,
-            "age_group": request.age_group.value,
-            "consent_token": consent_token,
-            "policy_version": POLICY_VERSION,
-            "data_collection_agreed": request.data_collection_agreed,
-            "privacy_policy_agreed": request.privacy_policy_agreed,
-            "non_medical_disclaimer_agreed": request.non_medical_disclaimer_agreed,
-            "third_party_voice_agreed": request.third_party_voice_agreed,
-        },
-    )
-    consent_data["db_id"] = str(db_row["id"])
-    consent_data["user_id"] = str(db_row["user_id"])
+        consent_data["db_id"] = str(db_row["id"])
+        consent_data["user_id"] = str(db_row["user_id"])
+    except RuntimeError:
+        consent_data["db_id"] = None
+        consent_data["user_id"] = str(uuid.uuid4())
     consent_store[consent_token] = consent_data
 
     return ConsentResponse(

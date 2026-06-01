@@ -12,11 +12,11 @@ interface AnalyzingPageProps {
 }
 
 const STEPS = [
-  { icon: AudioWaveform, label: '음성 전처리', detail: '녹음 품질과 길이를 확인합니다.' },
-  { icon: Users, label: '화자 분리', detail: '대상자 음성을 중심으로 추출합니다.' },
-  { icon: BarChart3, label: '특징 분석', detail: 'Mel-spectrogram과 음향 특징을 계산합니다.' },
-  { icon: Brain, label: '모델 추론', detail: 'Normal/MCI/AD 가능성을 산출합니다.' },
-  { icon: Shield, label: '리포트 생성', detail: '비의료적 안내 문구를 정리합니다.' },
+  { icon: AudioWaveform, label: '통화 전처리', detail: 'm4a 파일을 표준 음성으로 변환합니다.' },
+  { icon: Users, label: '자녀 음성 제외', detail: '등록된 자녀 음성과 통화 속 화자를 비교합니다.' },
+  { icon: BarChart3, label: '부모 음성 분석', detail: '부모님 발화의 음성 특징을 계산합니다.' },
+  { icon: Brain, label: '위험 신호 추론', detail: '인지기능 변화 관련 위험 신호를 산출합니다.' },
+  { icon: Shield, label: '리포트 생성', detail: '비의료적 참고 리포트를 정리합니다.' },
 ]
 
 export default function AnalyzingPage({ fileId, voiceSampleId, onComplete, onBack }: AnalyzingPageProps) {
@@ -81,9 +81,9 @@ export default function AnalyzingPage({ fileId, voiceSampleId, onComplete, onBac
             <Brain className="h-11 w-11" />
           </div>
         </div>
-        <p className="mt-7 text-center text-[23px] font-black">음성 분석 중</p>
+        <p className="mt-7 text-center text-[23px] font-black">통화 음성 분석 중</p>
         <p className="mt-2 text-center text-[13px] leading-5 text-white/75">
-          선택한 녹음 데이터를 기반으로 인지 건강 리포트를 준비하고 있습니다.
+          자녀 음성을 제외하고 부모님 음성의 위험 신호 리포트를 준비하고 있습니다.
         </p>
         <div className="mt-7 space-y-2">
           <div className="flex justify-between text-[12px] font-bold text-white/80">

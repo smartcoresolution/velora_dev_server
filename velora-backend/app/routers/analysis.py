@@ -30,14 +30,56 @@ router = APIRouter()
 analysis_store: dict[str, dict] = {}
 
 TARGET_SR = 16000
+LIGHTWEIGHT_VALUES = {"1", "true", "yes", "on"}
+
+
+def _lightweight_analysis_enabled() -> bool:
+    return os.getenv("VELORA_LIGHTWEIGHT_INFERENCE", "false").strip().lower() in LIGHTWEIGHT_VALUES
+
+
+def _trace_analysis(message: str) -> None:
+    if os.getenv("VELORA_ANALYSIS_TRACE", "false").strip().lower() not in LIGHTWEIGHT_VALUES:
+        return
+    with open("/tmp/velora_analysis_trace.log", "a", encoding="utf-8") as file:
+        file.write(f"{time.time():.3f} {message}\n")
+
+
+def _extract_lightweight_acoustic_features(y: np.ndarray, sr: int) -> dict:
+    mfcc = librosa.feature.mfcc(y=y, sr=sr, n_mfcc=13)
+    mfcc_mean = np.mean(mfcc, axis=1).tolist()
+    mfcc_std = np.std(mfcc, axis=1).tolist()
+    rms = librosa.feature.rms(y=y)[0]
+    energy_mean = float(np.mean(rms))
+    energy_std = float(np.std(rms))
+    spectral_centroid = librosa.feature.spectral_centroid(y=y, sr=sr)[0]
+    spectral_bandwidth = librosa.feature.spectral_bandwidth(y=y, sr=sr)[0]
+    zcr = librosa.feature.zero_crossing_rate(y)[0]
+
+    return {
+        "mfcc_mean": [round(v, 4) for v in mfcc_mean],
+        "mfcc_std": [round(v, 4) for v in mfcc_std],
+        "pitch_mean": 0.0,
+        "pitch_std": 0.0,
+        "pitch_range": 0.0,
+        "energy_mean": round(energy_mean, 6),
+        "energy_std": round(energy_std, 6),
+        "energy_variability": round(float(energy_std / energy_mean) if energy_mean > 0 else 0.0, 4),
+        "speech_rate": 0.0,
+        "prosody_stability": 0.5,
+        "spectral_centroid_mean": round(float(np.mean(spectral_centroid)), 2),
+        "spectral_bandwidth_mean": round(float(np.mean(spectral_bandwidth)), 2),
+        "zero_crossing_rate": round(float(np.mean(zcr)), 6),
+    }
 
 
 @router.post("/start/{file_id}", response_model=AnalysisResult)
 async def start_analysis(
     file_id: str,
     voice_sample_id: str = Query(None, description="등록된 음성 샘플 ID (선택)"),
+    voice_sample_role: str = Query("target", description="음성 샘플 역할: target 또는 exclude"),
     transcript_text: str = Query(None, description="선택 입력: 전사 텍스트가 있으면 언어 특징을 함께 산출"),
 ):
+    _trace_analysis(f"start request file_id={file_id} voice_sample_id={voice_sample_id}")
     if file_id not in file_store:
         db_file = get_audio_file(file_id)
         if db_file:
@@ -61,6 +103,7 @@ async def start_analysis(
         raise HTTPException(status_code=404, detail="파일을 찾을 수 없습니다.")
 
     file_info = file_store[file_id]
+    _trace_analysis("file info loaded")
 
     if not file_info["quality"]["quality_pass"]:
         raise HTTPException(
@@ -82,20 +125,64 @@ async def start_analysis(
         sample_data = get_voice_sample(voice_sample_id)
         if sample_data and sample_data["embedding"] is not None:
             voice_embedding = np.array(sample_data["embedding"])
+    _trace_analysis(f"voice embedding loaded={voice_embedding is not None}")
+
+    normalized_voice_sample_role = (voice_sample_role or "target").strip().lower()
+    if normalized_voice_sample_role not in {"target", "exclude"}:
+        raise HTTPException(status_code=400, detail="voice_sample_role은 target 또는 exclude만 허용됩니다.")
 
     # Step 1: Speaker Diarization
-    diarization_result = perform_speaker_diarization(wav_path, voice_embedding)
+    if _lightweight_analysis_enabled():
+        _trace_analysis("lightweight load audio start")
+        y, _ = librosa.load(wav_path, sr=TARGET_SR, duration=30)
+        _trace_analysis(f"lightweight load audio done samples={len(y)}")
+        duration = round(len(y) / TARGET_SR, 2)
+        diarization_result = {
+            "total_speakers": 2 if voice_embedding is not None else 1,
+            "target_speaker": "parent_candidate" if normalized_voice_sample_role == "exclude" else "speaker_A",
+            "target_segments": [{
+                "speaker": "parent_candidate" if normalized_voice_sample_role == "exclude" else "speaker_A",
+                "start_time": 0.0,
+                "end_time": duration,
+                "duration": duration,
+            }],
+            "excluded_segments": [],
+            "diarization_confidence": 0.72 if voice_embedding is not None else 0.65,
+        }
+        target_audio = y
+    else:
+        _trace_analysis("diarization start")
+        diarization_result = perform_speaker_diarization(wav_path, voice_embedding)
+        _trace_analysis("diarization done")
+        if voice_embedding is not None and normalized_voice_sample_role == "exclude":
+            excluded_voice_segments = diarization_result["target_segments"]
+            parent_candidate_segments = diarization_result["excluded_segments"]
+            if parent_candidate_segments:
+                diarization_result = {
+                    **diarization_result,
+                    "target_speaker": "parent_candidate",
+                    "target_segments": parent_candidate_segments,
+                    "excluded_segments": excluded_voice_segments,
+                }
 
-    # Step 2: Extract target speaker audio
-    target_audio = extract_target_audio(wav_path, diarization_result["target_segments"])
+        # Step 2: Extract target speaker audio
+        target_audio = extract_target_audio(wav_path, diarization_result["target_segments"])
+        _trace_analysis(f"target extraction done samples={len(target_audio)}")
     target_audio_path = f"/tmp/velora_processed/{analysis_id}_target.wav"
+    _trace_analysis("write target audio start")
     sf.write(target_audio_path, target_audio, TARGET_SR)
+    _trace_analysis("write target audio done")
 
     # Step 3: Extract speech statistics
     speech_stats = extract_speech_statistics(target_audio, TARGET_SR)
+    _trace_analysis("speech stats done")
 
     # Step 4: Extract acoustic features
-    acoustic_features = extract_acoustic_features(target_audio, TARGET_SR)
+    if _lightweight_analysis_enabled():
+        acoustic_features = _extract_lightweight_acoustic_features(target_audio, TARGET_SR)
+    else:
+        acoustic_features = extract_acoustic_features(target_audio, TARGET_SR)
+    _trace_analysis("acoustic features done")
 
     # Step 5: Extract linguistic features when transcript text is provided
     linguistic_features = extract_linguistic_features(transcript_text)
@@ -105,7 +192,9 @@ async def start_analysis(
 
     # Step 7: Run trained Normal/MCI/AD model
     try:
+        _trace_analysis("cognitive prediction start")
         cognitive_result = predict_cognitive_status(target_audio_path)
+        _trace_analysis("cognitive prediction done")
     except CognitiveModelUnavailable as exc:
         raise HTTPException(
             status_code=503,

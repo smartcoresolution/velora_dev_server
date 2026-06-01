@@ -1,0 +1,970 @@
+{
+  "results": [
+    {
+      "task": "1",
+      "task_dir": "/home/ubuntu/workspace/nasw/download/prepared_normal_mci_ad/multiclass/1",
+      "class_indices": {
+        "AD": 0,
+        "MCI": 1,
+        "Normal": 2
+      },
+      "class_names": [
+        "AD",
+        "MCI",
+        "Normal"
+      ],
+      "image_size": [
+        100,
+        100
+      ],
+      "weights": "imagenet",
+      "fine_tune_from": "block5_conv1",
+      "preprocessing": {
+        "source_root": "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)",
+        "source_roots_scanned": [
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)",
+          "/home/ubuntu/workspace/dataset"
+        ],
+        "json_roots_scanned": [
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)/IB-APPS",
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)/CERAD-K",
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)/SNSB-II",
+          "/home/ubuntu/workspace/dataset/IB-APPS"
+        ],
+        "metadata_csv": "",
+        "audio_kind": "raw",
+        "recursive_audio_search": true,
+        "sample_rate": 48000,
+        "seconds": 30,
+        "dpi": 100,
+        "train_ratio": 0.7,
+        "val_ratio": 0.15,
+        "paper_types": [
+          "IB-APPS",
+          "CERAD-K",
+          "SNSB-II"
+        ],
+        "task_offset": 1,
+        "counts": {
+          "read": 5791,
+          "written": 5791,
+          "skipped_unknown_label": 0,
+          "skipped_missing_audio": 0,
+          "skipped_task_filter": 0,
+          "json_errors": 0
+        },
+        "path": "/home/ubuntu/workspace/nasw/download/prepared_normal_mci_ad/preprocessing_config.json"
+      },
+      "learning_rate": 0.0001,
+      "batch_size": 16,
+      "epochs_requested": 100,
+      "epochs_trained": 17,
+      "resumed": false,
+      "loaded_model_path": "",
+      "best_model_path": "/home/ubuntu/workspace/nasw/download/ad_mci_normal/task-1/normal_mci_ad_task-1_best.h5",
+      "final_model_path": "/home/ubuntu/workspace/nasw/download/ad_mci_normal/task-1/normal_mci_ad_task-1_final.h5",
+      "training_log_path": "/home/ubuntu/workspace/nasw/download/ad_mci_normal/task-1/normal_mci_ad_task-1_20260528-093241.csv",
+      "test_metrics": {
+        "loss": 1.1640794277191162,
+        "accuracy": 0.4833333194255829
+      }
+    },
+    {
+      "task": "10",
+      "task_dir": "/home/ubuntu/workspace/nasw/download/prepared_normal_mci_ad/multiclass/10",
+      "class_indices": {
+        "AD": 0,
+        "MCI": 1,
+        "Normal": 2
+      },
+      "class_names": [
+        "AD",
+        "MCI",
+        "Normal"
+      ],
+      "image_size": [
+        100,
+        100
+      ],
+      "weights": "imagenet",
+      "fine_tune_from": "block5_conv1",
+      "preprocessing": {
+        "source_root": "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)",
+        "source_roots_scanned": [
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)",
+          "/home/ubuntu/workspace/dataset"
+        ],
+        "json_roots_scanned": [
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)/IB-APPS",
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)/CERAD-K",
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)/SNSB-II",
+          "/home/ubuntu/workspace/dataset/IB-APPS"
+        ],
+        "metadata_csv": "",
+        "audio_kind": "raw",
+        "recursive_audio_search": true,
+        "sample_rate": 48000,
+        "seconds": 30,
+        "dpi": 100,
+        "train_ratio": 0.7,
+        "val_ratio": 0.15,
+        "paper_types": [
+          "IB-APPS",
+          "CERAD-K",
+          "SNSB-II"
+        ],
+        "task_offset": 1,
+        "counts": {
+          "read": 5791,
+          "written": 5791,
+          "skipped_unknown_label": 0,
+          "skipped_missing_audio": 0,
+          "skipped_task_filter": 0,
+          "json_errors": 0
+        },
+        "path": "/home/ubuntu/workspace/nasw/download/prepared_normal_mci_ad/preprocessing_config.json"
+      },
+      "learning_rate": 0.0001,
+      "batch_size": 16,
+      "epochs_requested": 100,
+      "epochs_trained": 22,
+      "resumed": false,
+      "loaded_model_path": "",
+      "best_model_path": "/home/ubuntu/workspace/nasw/download/ad_mci_normal/task-10/normal_mci_ad_task-10_best.h5",
+      "final_model_path": "/home/ubuntu/workspace/nasw/download/ad_mci_normal/task-10/normal_mci_ad_task-10_final.h5",
+      "training_log_path": "/home/ubuntu/workspace/nasw/download/ad_mci_normal/task-10/normal_mci_ad_task-10_20260528-093313.csv",
+      "test_metrics": {
+        "loss": 1.841209888458252,
+        "accuracy": 0.33898305892944336
+      }
+    },
+    {
+      "task": "11",
+      "task_dir": "/home/ubuntu/workspace/nasw/download/prepared_normal_mci_ad/multiclass/11",
+      "class_indices": {
+        "AD": 0,
+        "MCI": 1,
+        "Normal": 2
+      },
+      "class_names": [
+        "AD",
+        "MCI",
+        "Normal"
+      ],
+      "image_size": [
+        100,
+        100
+      ],
+      "weights": "imagenet",
+      "fine_tune_from": "block5_conv1",
+      "preprocessing": {
+        "source_root": "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)",
+        "source_roots_scanned": [
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)",
+          "/home/ubuntu/workspace/dataset"
+        ],
+        "json_roots_scanned": [
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)/IB-APPS",
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)/CERAD-K",
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)/SNSB-II",
+          "/home/ubuntu/workspace/dataset/IB-APPS"
+        ],
+        "metadata_csv": "",
+        "audio_kind": "raw",
+        "recursive_audio_search": true,
+        "sample_rate": 48000,
+        "seconds": 30,
+        "dpi": 100,
+        "train_ratio": 0.7,
+        "val_ratio": 0.15,
+        "paper_types": [
+          "IB-APPS",
+          "CERAD-K",
+          "SNSB-II"
+        ],
+        "task_offset": 1,
+        "counts": {
+          "read": 5791,
+          "written": 5791,
+          "skipped_unknown_label": 0,
+          "skipped_missing_audio": 0,
+          "skipped_task_filter": 0,
+          "json_errors": 0
+        },
+        "path": "/home/ubuntu/workspace/nasw/download/prepared_normal_mci_ad/preprocessing_config.json"
+      },
+      "learning_rate": 0.0001,
+      "batch_size": 16,
+      "epochs_requested": 100,
+      "epochs_trained": 20,
+      "resumed": false,
+      "loaded_model_path": "",
+      "best_model_path": "/home/ubuntu/workspace/nasw/download/ad_mci_normal/task-11/normal_mci_ad_task-11_best.h5",
+      "final_model_path": "/home/ubuntu/workspace/nasw/download/ad_mci_normal/task-11/normal_mci_ad_task-11_final.h5",
+      "training_log_path": "/home/ubuntu/workspace/nasw/download/ad_mci_normal/task-11/normal_mci_ad_task-11_20260528-093342.csv",
+      "test_metrics": {
+        "loss": 1.6628625392913818,
+        "accuracy": 0.4576271176338196
+      }
+    },
+    {
+      "task": "2",
+      "task_dir": "/home/ubuntu/workspace/nasw/download/prepared_normal_mci_ad/multiclass/2",
+      "class_indices": {
+        "AD": 0,
+        "MCI": 1,
+        "Normal": 2
+      },
+      "class_names": [
+        "AD",
+        "MCI",
+        "Normal"
+      ],
+      "image_size": [
+        100,
+        100
+      ],
+      "weights": "imagenet",
+      "fine_tune_from": "block5_conv1",
+      "preprocessing": {
+        "source_root": "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)",
+        "source_roots_scanned": [
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)",
+          "/home/ubuntu/workspace/dataset"
+        ],
+        "json_roots_scanned": [
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)/IB-APPS",
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)/CERAD-K",
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)/SNSB-II",
+          "/home/ubuntu/workspace/dataset/IB-APPS"
+        ],
+        "metadata_csv": "",
+        "audio_kind": "raw",
+        "recursive_audio_search": true,
+        "sample_rate": 48000,
+        "seconds": 30,
+        "dpi": 100,
+        "train_ratio": 0.7,
+        "val_ratio": 0.15,
+        "paper_types": [
+          "IB-APPS",
+          "CERAD-K",
+          "SNSB-II"
+        ],
+        "task_offset": 1,
+        "counts": {
+          "read": 5791,
+          "written": 5791,
+          "skipped_unknown_label": 0,
+          "skipped_missing_audio": 0,
+          "skipped_task_filter": 0,
+          "json_errors": 0
+        },
+        "path": "/home/ubuntu/workspace/nasw/download/prepared_normal_mci_ad/preprocessing_config.json"
+      },
+      "learning_rate": 0.0001,
+      "batch_size": 16,
+      "epochs_requested": 100,
+      "epochs_trained": 12,
+      "resumed": false,
+      "loaded_model_path": "",
+      "best_model_path": "/home/ubuntu/workspace/nasw/download/ad_mci_normal/task-2/normal_mci_ad_task-2_best.h5",
+      "final_model_path": "/home/ubuntu/workspace/nasw/download/ad_mci_normal/task-2/normal_mci_ad_task-2_final.h5",
+      "training_log_path": "/home/ubuntu/workspace/nasw/download/ad_mci_normal/task-2/normal_mci_ad_task-2_20260528-093409.csv",
+      "test_metrics": {
+        "loss": 1.0933953523635864,
+        "accuracy": 0.48275861144065857
+      }
+    },
+    {
+      "task": "3",
+      "task_dir": "/home/ubuntu/workspace/nasw/download/prepared_normal_mci_ad/multiclass/3",
+      "class_indices": {
+        "AD": 0,
+        "MCI": 1,
+        "Normal": 2
+      },
+      "class_names": [
+        "AD",
+        "MCI",
+        "Normal"
+      ],
+      "image_size": [
+        100,
+        100
+      ],
+      "weights": "imagenet",
+      "fine_tune_from": "block5_conv1",
+      "preprocessing": {
+        "source_root": "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)",
+        "source_roots_scanned": [
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)",
+          "/home/ubuntu/workspace/dataset"
+        ],
+        "json_roots_scanned": [
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)/IB-APPS",
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)/CERAD-K",
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)/SNSB-II",
+          "/home/ubuntu/workspace/dataset/IB-APPS"
+        ],
+        "metadata_csv": "",
+        "audio_kind": "raw",
+        "recursive_audio_search": true,
+        "sample_rate": 48000,
+        "seconds": 30,
+        "dpi": 100,
+        "train_ratio": 0.7,
+        "val_ratio": 0.15,
+        "paper_types": [
+          "IB-APPS",
+          "CERAD-K",
+          "SNSB-II"
+        ],
+        "task_offset": 1,
+        "counts": {
+          "read": 5791,
+          "written": 5791,
+          "skipped_unknown_label": 0,
+          "skipped_missing_audio": 0,
+          "skipped_task_filter": 0,
+          "json_errors": 0
+        },
+        "path": "/home/ubuntu/workspace/nasw/download/prepared_normal_mci_ad/preprocessing_config.json"
+      },
+      "learning_rate": 0.0001,
+      "batch_size": 16,
+      "epochs_requested": 100,
+      "epochs_trained": 17,
+      "resumed": false,
+      "loaded_model_path": "",
+      "best_model_path": "/home/ubuntu/workspace/nasw/download/ad_mci_normal/task-3/normal_mci_ad_task-3_best.h5",
+      "final_model_path": "/home/ubuntu/workspace/nasw/download/ad_mci_normal/task-3/normal_mci_ad_task-3_final.h5",
+      "training_log_path": "/home/ubuntu/workspace/nasw/download/ad_mci_normal/task-3/normal_mci_ad_task-3_20260528-093428.csv",
+      "test_metrics": {
+        "loss": 1.2391486167907715,
+        "accuracy": 0.5333333611488342
+      }
+    },
+    {
+      "task": "4",
+      "task_dir": "/home/ubuntu/workspace/nasw/download/prepared_normal_mci_ad/multiclass/4",
+      "class_indices": {
+        "AD": 0,
+        "MCI": 1,
+        "Normal": 2
+      },
+      "class_names": [
+        "AD",
+        "MCI",
+        "Normal"
+      ],
+      "image_size": [
+        100,
+        100
+      ],
+      "weights": "imagenet",
+      "fine_tune_from": "block5_conv1",
+      "preprocessing": {
+        "source_root": "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)",
+        "source_roots_scanned": [
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)",
+          "/home/ubuntu/workspace/dataset"
+        ],
+        "json_roots_scanned": [
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)/IB-APPS",
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)/CERAD-K",
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)/SNSB-II",
+          "/home/ubuntu/workspace/dataset/IB-APPS"
+        ],
+        "metadata_csv": "",
+        "audio_kind": "raw",
+        "recursive_audio_search": true,
+        "sample_rate": 48000,
+        "seconds": 30,
+        "dpi": 100,
+        "train_ratio": 0.7,
+        "val_ratio": 0.15,
+        "paper_types": [
+          "IB-APPS",
+          "CERAD-K",
+          "SNSB-II"
+        ],
+        "task_offset": 1,
+        "counts": {
+          "read": 5791,
+          "written": 5791,
+          "skipped_unknown_label": 0,
+          "skipped_missing_audio": 0,
+          "skipped_task_filter": 0,
+          "json_errors": 0
+        },
+        "path": "/home/ubuntu/workspace/nasw/download/prepared_normal_mci_ad/preprocessing_config.json"
+      },
+      "learning_rate": 0.0001,
+      "batch_size": 16,
+      "epochs_requested": 100,
+      "epochs_trained": 17,
+      "resumed": false,
+      "loaded_model_path": "",
+      "best_model_path": "/home/ubuntu/workspace/nasw/download/ad_mci_normal/task-4/normal_mci_ad_task-4_best.h5",
+      "final_model_path": "/home/ubuntu/workspace/nasw/download/ad_mci_normal/task-4/normal_mci_ad_task-4_final.h5",
+      "training_log_path": "/home/ubuntu/workspace/nasw/download/ad_mci_normal/task-4/normal_mci_ad_task-4_20260528-093452.csv",
+      "test_metrics": {
+        "loss": 1.2022292613983154,
+        "accuracy": 0.4333333373069763
+      }
+    },
+    {
+      "task": "5",
+      "task_dir": "/home/ubuntu/workspace/nasw/download/prepared_normal_mci_ad/multiclass/5",
+      "class_indices": {
+        "AD": 0,
+        "MCI": 1,
+        "Normal": 2
+      },
+      "class_names": [
+        "AD",
+        "MCI",
+        "Normal"
+      ],
+      "image_size": [
+        100,
+        100
+      ],
+      "weights": "imagenet",
+      "fine_tune_from": "block5_conv1",
+      "preprocessing": {
+        "source_root": "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)",
+        "source_roots_scanned": [
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)",
+          "/home/ubuntu/workspace/dataset"
+        ],
+        "json_roots_scanned": [
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)/IB-APPS",
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)/CERAD-K",
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)/SNSB-II",
+          "/home/ubuntu/workspace/dataset/IB-APPS"
+        ],
+        "metadata_csv": "",
+        "audio_kind": "raw",
+        "recursive_audio_search": true,
+        "sample_rate": 48000,
+        "seconds": 30,
+        "dpi": 100,
+        "train_ratio": 0.7,
+        "val_ratio": 0.15,
+        "paper_types": [
+          "IB-APPS",
+          "CERAD-K",
+          "SNSB-II"
+        ],
+        "task_offset": 1,
+        "counts": {
+          "read": 5791,
+          "written": 5791,
+          "skipped_unknown_label": 0,
+          "skipped_missing_audio": 0,
+          "skipped_task_filter": 0,
+          "json_errors": 0
+        },
+        "path": "/home/ubuntu/workspace/nasw/download/prepared_normal_mci_ad/preprocessing_config.json"
+      },
+      "learning_rate": 0.0001,
+      "batch_size": 16,
+      "epochs_requested": 100,
+      "epochs_trained": 12,
+      "resumed": false,
+      "loaded_model_path": "",
+      "best_model_path": "/home/ubuntu/workspace/nasw/download/ad_mci_normal/task-5/normal_mci_ad_task-5_best.h5",
+      "final_model_path": "/home/ubuntu/workspace/nasw/download/ad_mci_normal/task-5/normal_mci_ad_task-5_final.h5",
+      "training_log_path": "/home/ubuntu/workspace/nasw/download/ad_mci_normal/task-5/normal_mci_ad_task-5_20260528-093517.csv",
+      "test_metrics": {
+        "loss": 1.0983691215515137,
+        "accuracy": 0.4000000059604645
+      }
+    },
+    {
+      "task": "6",
+      "task_dir": "/home/ubuntu/workspace/nasw/download/prepared_normal_mci_ad/multiclass/6",
+      "class_indices": {
+        "AD": 0,
+        "MCI": 1,
+        "Normal": 2
+      },
+      "class_names": [
+        "AD",
+        "MCI",
+        "Normal"
+      ],
+      "image_size": [
+        100,
+        100
+      ],
+      "weights": "imagenet",
+      "fine_tune_from": "block5_conv1",
+      "preprocessing": {
+        "source_root": "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)",
+        "source_roots_scanned": [
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)",
+          "/home/ubuntu/workspace/dataset"
+        ],
+        "json_roots_scanned": [
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)/IB-APPS",
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)/CERAD-K",
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)/SNSB-II",
+          "/home/ubuntu/workspace/dataset/IB-APPS"
+        ],
+        "metadata_csv": "",
+        "audio_kind": "raw",
+        "recursive_audio_search": true,
+        "sample_rate": 48000,
+        "seconds": 30,
+        "dpi": 100,
+        "train_ratio": 0.7,
+        "val_ratio": 0.15,
+        "paper_types": [
+          "IB-APPS",
+          "CERAD-K",
+          "SNSB-II"
+        ],
+        "task_offset": 1,
+        "counts": {
+          "read": 5791,
+          "written": 5791,
+          "skipped_unknown_label": 0,
+          "skipped_missing_audio": 0,
+          "skipped_task_filter": 0,
+          "json_errors": 0
+        },
+        "path": "/home/ubuntu/workspace/nasw/download/prepared_normal_mci_ad/preprocessing_config.json"
+      },
+      "learning_rate": 0.0001,
+      "batch_size": 16,
+      "epochs_requested": 100,
+      "epochs_trained": 19,
+      "resumed": false,
+      "loaded_model_path": "",
+      "best_model_path": "/home/ubuntu/workspace/nasw/download/ad_mci_normal/task-6/normal_mci_ad_task-6_best.h5",
+      "final_model_path": "/home/ubuntu/workspace/nasw/download/ad_mci_normal/task-6/normal_mci_ad_task-6_final.h5",
+      "training_log_path": "/home/ubuntu/workspace/nasw/download/ad_mci_normal/task-6/normal_mci_ad_task-6_20260528-093534.csv",
+      "test_metrics": {
+        "loss": 0.9819044470787048,
+        "accuracy": 0.47457626461982727
+      }
+    },
+    {
+      "task": "7",
+      "task_dir": "/home/ubuntu/workspace/nasw/download/prepared_normal_mci_ad/multiclass/7",
+      "class_indices": {
+        "AD": 0,
+        "MCI": 1,
+        "Normal": 2
+      },
+      "class_names": [
+        "AD",
+        "MCI",
+        "Normal"
+      ],
+      "image_size": [
+        100,
+        100
+      ],
+      "weights": "imagenet",
+      "fine_tune_from": "block5_conv1",
+      "preprocessing": {
+        "source_root": "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)",
+        "source_roots_scanned": [
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)",
+          "/home/ubuntu/workspace/dataset"
+        ],
+        "json_roots_scanned": [
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)/IB-APPS",
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)/CERAD-K",
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)/SNSB-II",
+          "/home/ubuntu/workspace/dataset/IB-APPS"
+        ],
+        "metadata_csv": "",
+        "audio_kind": "raw",
+        "recursive_audio_search": true,
+        "sample_rate": 48000,
+        "seconds": 30,
+        "dpi": 100,
+        "train_ratio": 0.7,
+        "val_ratio": 0.15,
+        "paper_types": [
+          "IB-APPS",
+          "CERAD-K",
+          "SNSB-II"
+        ],
+        "task_offset": 1,
+        "counts": {
+          "read": 5791,
+          "written": 5791,
+          "skipped_unknown_label": 0,
+          "skipped_missing_audio": 0,
+          "skipped_task_filter": 0,
+          "json_errors": 0
+        },
+        "path": "/home/ubuntu/workspace/nasw/download/prepared_normal_mci_ad/preprocessing_config.json"
+      },
+      "learning_rate": 0.0001,
+      "batch_size": 16,
+      "epochs_requested": 100,
+      "epochs_trained": 18,
+      "resumed": false,
+      "loaded_model_path": "",
+      "best_model_path": "/home/ubuntu/workspace/nasw/download/ad_mci_normal/task-7/normal_mci_ad_task-7_best.h5",
+      "final_model_path": "/home/ubuntu/workspace/nasw/download/ad_mci_normal/task-7/normal_mci_ad_task-7_final.h5",
+      "training_log_path": "/home/ubuntu/workspace/nasw/download/ad_mci_normal/task-7/normal_mci_ad_task-7_20260528-093601.csv",
+      "test_metrics": {
+        "loss": 1.0717110633850098,
+        "accuracy": 0.5
+      }
+    },
+    {
+      "task": "8",
+      "task_dir": "/home/ubuntu/workspace/nasw/download/prepared_normal_mci_ad/multiclass/8",
+      "class_indices": {
+        "AD": 0,
+        "MCI": 1,
+        "Normal": 2
+      },
+      "class_names": [
+        "AD",
+        "MCI",
+        "Normal"
+      ],
+      "image_size": [
+        100,
+        100
+      ],
+      "weights": "imagenet",
+      "fine_tune_from": "block5_conv1",
+      "preprocessing": {
+        "source_root": "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)",
+        "source_roots_scanned": [
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)",
+          "/home/ubuntu/workspace/dataset"
+        ],
+        "json_roots_scanned": [
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)/IB-APPS",
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)/CERAD-K",
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)/SNSB-II",
+          "/home/ubuntu/workspace/dataset/IB-APPS"
+        ],
+        "metadata_csv": "",
+        "audio_kind": "raw",
+        "recursive_audio_search": true,
+        "sample_rate": 48000,
+        "seconds": 30,
+        "dpi": 100,
+        "train_ratio": 0.7,
+        "val_ratio": 0.15,
+        "paper_types": [
+          "IB-APPS",
+          "CERAD-K",
+          "SNSB-II"
+        ],
+        "task_offset": 1,
+        "counts": {
+          "read": 5791,
+          "written": 5791,
+          "skipped_unknown_label": 0,
+          "skipped_missing_audio": 0,
+          "skipped_task_filter": 0,
+          "json_errors": 0
+        },
+        "path": "/home/ubuntu/workspace/nasw/download/prepared_normal_mci_ad/preprocessing_config.json"
+      },
+      "learning_rate": 0.0001,
+      "batch_size": 16,
+      "epochs_requested": 100,
+      "epochs_trained": 12,
+      "resumed": false,
+      "loaded_model_path": "",
+      "best_model_path": "/home/ubuntu/workspace/nasw/download/ad_mci_normal/task-8/normal_mci_ad_task-8_best.h5",
+      "final_model_path": "/home/ubuntu/workspace/nasw/download/ad_mci_normal/task-8/normal_mci_ad_task-8_final.h5",
+      "training_log_path": "/home/ubuntu/workspace/nasw/download/ad_mci_normal/task-8/normal_mci_ad_task-8_20260528-093624.csv",
+      "test_metrics": {
+        "loss": 1.098602056503296,
+        "accuracy": 0.4166666567325592
+      }
+    },
+    {
+      "task": "9",
+      "task_dir": "/home/ubuntu/workspace/nasw/download/prepared_normal_mci_ad/multiclass/9",
+      "class_indices": {
+        "AD": 0,
+        "MCI": 1,
+        "Normal": 2
+      },
+      "class_names": [
+        "AD",
+        "MCI",
+        "Normal"
+      ],
+      "image_size": [
+        100,
+        100
+      ],
+      "weights": "imagenet",
+      "fine_tune_from": "block5_conv1",
+      "preprocessing": {
+        "source_root": "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)",
+        "source_roots_scanned": [
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)",
+          "/home/ubuntu/workspace/dataset"
+        ],
+        "json_roots_scanned": [
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)/IB-APPS",
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)/CERAD-K",
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)/SNSB-II",
+          "/home/ubuntu/workspace/dataset/IB-APPS"
+        ],
+        "metadata_csv": "",
+        "audio_kind": "raw",
+        "recursive_audio_search": true,
+        "sample_rate": 48000,
+        "seconds": 30,
+        "dpi": 100,
+        "train_ratio": 0.7,
+        "val_ratio": 0.15,
+        "paper_types": [
+          "IB-APPS",
+          "CERAD-K",
+          "SNSB-II"
+        ],
+        "task_offset": 1,
+        "counts": {
+          "read": 5791,
+          "written": 5791,
+          "skipped_unknown_label": 0,
+          "skipped_missing_audio": 0,
+          "skipped_task_filter": 0,
+          "json_errors": 0
+        },
+        "path": "/home/ubuntu/workspace/nasw/download/prepared_normal_mci_ad/preprocessing_config.json"
+      },
+      "learning_rate": 0.0001,
+      "batch_size": 16,
+      "epochs_requested": 100,
+      "epochs_trained": 11,
+      "resumed": false,
+      "loaded_model_path": "",
+      "best_model_path": "/home/ubuntu/workspace/nasw/download/ad_mci_normal/task-9/normal_mci_ad_task-9_best.h5",
+      "final_model_path": "/home/ubuntu/workspace/nasw/download/ad_mci_normal/task-9/normal_mci_ad_task-9_final.h5",
+      "training_log_path": "/home/ubuntu/workspace/nasw/download/ad_mci_normal/task-9/normal_mci_ad_task-9_20260528-093642.csv",
+      "test_metrics": {
+        "loss": 1.0984835624694824,
+        "accuracy": 0.4166666567325592
+      }
+    },
+    {
+      "task": "ALL",
+      "task_dir": "/home/ubuntu/workspace/nasw/download/prepared_normal_mci_ad/multiclass/ALL",
+      "class_indices": {
+        "AD": 0,
+        "MCI": 1,
+        "Normal": 2
+      },
+      "class_names": [
+        "AD",
+        "MCI",
+        "Normal"
+      ],
+      "image_size": [
+        100,
+        100
+      ],
+      "weights": "imagenet",
+      "fine_tune_from": "block5_conv1",
+      "preprocessing": {
+        "source_root": "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)",
+        "source_roots_scanned": [
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)",
+          "/home/ubuntu/workspace/dataset"
+        ],
+        "json_roots_scanned": [
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)/IB-APPS",
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)/CERAD-K",
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)/SNSB-II",
+          "/home/ubuntu/workspace/dataset/IB-APPS"
+        ],
+        "metadata_csv": "",
+        "audio_kind": "raw",
+        "recursive_audio_search": true,
+        "sample_rate": 48000,
+        "seconds": 30,
+        "dpi": 100,
+        "train_ratio": 0.7,
+        "val_ratio": 0.15,
+        "paper_types": [
+          "IB-APPS",
+          "CERAD-K",
+          "SNSB-II"
+        ],
+        "task_offset": 1,
+        "counts": {
+          "read": 5791,
+          "written": 5791,
+          "skipped_unknown_label": 0,
+          "skipped_missing_audio": 0,
+          "skipped_task_filter": 0,
+          "json_errors": 0
+        },
+        "path": "/home/ubuntu/workspace/nasw/download/prepared_normal_mci_ad/preprocessing_config.json"
+      },
+      "learning_rate": 0.0001,
+      "batch_size": 16,
+      "epochs_requested": 100,
+      "epochs_trained": 14,
+      "resumed": false,
+      "loaded_model_path": "",
+      "best_model_path": "/home/ubuntu/workspace/nasw/download/ad_mci_normal/task-ALL/normal_mci_ad_task-ALL_best.h5",
+      "final_model_path": "/home/ubuntu/workspace/nasw/download/ad_mci_normal/task-ALL/normal_mci_ad_task-ALL_final.h5",
+      "training_log_path": "/home/ubuntu/workspace/nasw/download/ad_mci_normal/task-ALL/normal_mci_ad_task-ALL_20260528-093658.csv",
+      "test_metrics": {
+        "loss": 1.0644114017486572,
+        "accuracy": 0.4637865424156189
+      }
+    },
+    {
+      "task": "CERAD-K",
+      "task_dir": "/home/ubuntu/workspace/nasw/download/prepared_normal_mci_ad/multiclass/CERAD-K",
+      "class_indices": {
+        "AD": 0,
+        "MCI": 1,
+        "Normal": 2
+      },
+      "class_names": [
+        "AD",
+        "MCI",
+        "Normal"
+      ],
+      "image_size": [
+        100,
+        100
+      ],
+      "weights": "imagenet",
+      "fine_tune_from": "block5_conv1",
+      "preprocessing": {
+        "source_root": "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)",
+        "source_roots_scanned": [
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)",
+          "/home/ubuntu/workspace/dataset"
+        ],
+        "json_roots_scanned": [
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)/IB-APPS",
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)/CERAD-K",
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)/SNSB-II",
+          "/home/ubuntu/workspace/dataset/IB-APPS"
+        ],
+        "metadata_csv": "",
+        "audio_kind": "raw",
+        "recursive_audio_search": true,
+        "sample_rate": 48000,
+        "seconds": 30,
+        "dpi": 100,
+        "train_ratio": 0.7,
+        "val_ratio": 0.15,
+        "paper_types": [
+          "IB-APPS",
+          "CERAD-K",
+          "SNSB-II"
+        ],
+        "task_offset": 1,
+        "counts": {
+          "read": 5791,
+          "written": 5791,
+          "skipped_unknown_label": 0,
+          "skipped_missing_audio": 0,
+          "skipped_task_filter": 0,
+          "json_errors": 0
+        },
+        "path": "/home/ubuntu/workspace/nasw/download/prepared_normal_mci_ad/preprocessing_config.json"
+      },
+      "learning_rate": 0.0001,
+      "batch_size": 16,
+      "epochs_requested": 100,
+      "epochs_trained": 12,
+      "resumed": false,
+      "loaded_model_path": "",
+      "best_model_path": "/home/ubuntu/workspace/nasw/download/ad_mci_normal/task-CERAD-K/normal_mci_ad_task-CERAD-K_best.h5",
+      "final_model_path": "/home/ubuntu/workspace/nasw/download/ad_mci_normal/task-CERAD-K/normal_mci_ad_task-CERAD-K_final.h5",
+      "training_log_path": "/home/ubuntu/workspace/nasw/download/ad_mci_normal/task-CERAD-K/normal_mci_ad_task-CERAD-K_20260528-093849.csv",
+      "test_metrics": {
+        "loss": 1.0792622566223145,
+        "accuracy": 0.45614033937454224
+      }
+    },
+    {
+      "task": "SNSB-II",
+      "task_dir": "/home/ubuntu/workspace/nasw/download/prepared_normal_mci_ad/multiclass/SNSB-II",
+      "class_indices": {
+        "AD": 0,
+        "MCI": 1,
+        "Normal": 2
+      },
+      "class_names": [
+        "AD",
+        "MCI",
+        "Normal"
+      ],
+      "image_size": [
+        100,
+        100
+      ],
+      "weights": "imagenet",
+      "fine_tune_from": "block5_conv1",
+      "preprocessing": {
+        "source_root": "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)",
+        "source_roots_scanned": [
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)",
+          "/home/ubuntu/workspace/dataset"
+        ],
+        "json_roots_scanned": [
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)/IB-APPS",
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)/CERAD-K",
+          "/home/ubuntu/workspace/dataset/dataset001/045.인지기능 장애 진단을 위한 음성-대화 데이터/01.데이터/0.최종데이터(100%)/SNSB-II",
+          "/home/ubuntu/workspace/dataset/IB-APPS"
+        ],
+        "metadata_csv": "",
+        "audio_kind": "raw",
+        "recursive_audio_search": true,
+        "sample_rate": 48000,
+        "seconds": 30,
+        "dpi": 100,
+        "train_ratio": 0.7,
+        "val_ratio": 0.15,
+        "paper_types": [
+          "IB-APPS",
+          "CERAD-K",
+          "SNSB-II"
+        ],
+        "task_offset": 1,
+        "counts": {
+          "read": 5791,
+          "written": 5791,
+          "skipped_unknown_label": 0,
+          "skipped_missing_audio": 0,
+          "skipped_task_filter": 0,
+          "json_errors": 0
+        },
+        "path": "/home/ubuntu/workspace/nasw/download/prepared_normal_mci_ad/preprocessing_config.json"
+      },
+      "learning_rate": 0.0001,
+      "batch_size": 16,
+      "epochs_requested": 100,
+      "epochs_trained": 11,
+      "resumed": false,
+      "loaded_model_path": "",
+      "best_model_path": "/home/ubuntu/workspace/nasw/download/ad_mci_normal/task-SNSB-II/normal_mci_ad_task-SNSB-II_best.h5",
+      "final_model_path": "/home/ubuntu/workspace/nasw/download/ad_mci_normal/task-SNSB-II/normal_mci_ad_task-SNSB-II_final.h5",
+      "training_log_path": "/home/ubuntu/workspace/nasw/download/ad_mci_normal/task-SNSB-II/normal_mci_ad_task-SNSB-II_20260528-093905.csv",
+      "test_metrics": {
+        "loss": 1.0985045433044434,
+        "accuracy": 0.4000000059604645
+      }
+    }
+  ]
+}

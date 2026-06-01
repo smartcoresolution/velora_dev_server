@@ -8,6 +8,8 @@ from typing import Any
 CPU_ONLY_ENV = "VELORA_FORCE_CPU"
 CPU_ONLY_VALUES = {"1", "true", "yes", "on"}
 CPU_ONLY_DEFAULT = "true"
+LIGHTWEIGHT_ENV = "VELORA_LIGHTWEIGHT_INFERENCE"
+LIGHTWEIGHT_DEFAULT = "false"
 
 os.environ.setdefault("MPLCONFIGDIR", "/tmp/mplconfig")
 os.environ.setdefault("NUMBA_CACHE_DIR", "/tmp/numba_cache")
@@ -71,6 +73,10 @@ class CognitiveModelUnavailable(RuntimeError):
 
 def _cpu_only_enabled() -> bool:
     return os.getenv(CPU_ONLY_ENV, CPU_ONLY_DEFAULT).strip().lower() in CPU_ONLY_VALUES
+
+
+def _lightweight_enabled() -> bool:
+    return os.getenv(LIGHTWEIGHT_ENV, LIGHTWEIGHT_DEFAULT).strip().lower() in CPU_ONLY_VALUES
 
 
 def _configure_tensorflow_runtime(tf: Any) -> dict[str, Any]:
@@ -261,17 +267,50 @@ def _message_for(predicted_label: str, risk_level: str) -> str:
     )
 
 
-def predict_cognitive_status(audio_path: str) -> dict:
-    bundle = _load_model_bundle()
-    array = _audio_to_array(
-        audio_path,
-        bundle["sample_rate"],
-        bundle["seconds"],
-        bundle["image_size"],
-        bundle["dpi"],
-    )
+def _probabilities_from_audio_features(audio_path: str) -> dict[str, float]:
+    y, sr = librosa.load(audio_path, sr=16000, duration=30)
+    if len(y) == 0:
+        raise CognitiveModelUnavailable("분석할 음성 데이터가 비어 있습니다.")
 
-    probability_map = _predict_probabilities(bundle["model"], array, bundle["class_names"])
+    rms = librosa.feature.rms(y=y)[0]
+    zcr = librosa.feature.zero_crossing_rate(y)[0]
+    centroid = librosa.feature.spectral_centroid(y=y, sr=sr)[0]
+
+    energy_mean = float(np.mean(rms))
+    energy_std = float(np.std(rms))
+    silence_ratio = float(np.mean(rms < max(0.005, energy_mean * 0.35)))
+    zcr_mean = float(np.mean(zcr))
+    centroid_mean = float(np.mean(centroid) / max(sr / 2, 1))
+    variability = energy_std / max(energy_mean, 1e-6)
+
+    change_signal = np.clip(
+        0.22
+        + silence_ratio * 0.28
+        + variability * 0.12
+        + max(0.0, 0.08 - zcr_mean) * 1.6
+        + max(0.0, 0.28 - centroid_mean) * 0.35,
+        0.05,
+        0.9,
+    )
+    ad_share = np.clip(
+        0.10
+        + silence_ratio * 0.20
+        + max(0.0, 0.20 - centroid_mean) * 0.30,
+        0.03,
+        0.45,
+    )
+    mci_share = np.clip(change_signal - ad_share, 0.05, 0.7)
+    normal = np.clip(1.0 - mci_share - ad_share, 0.05, 0.92)
+
+    total = normal + mci_share + ad_share
+    return {
+        "Normal": float(normal / total),
+        "MCI": float(mci_share / total),
+        "AD": float(ad_share / total),
+    }
+
+
+def _result_from_probabilities(probability_map: dict[str, float], model_source: str, model_path: str | None = None, metadata_path: str | None = None) -> dict:
     predicted_label = max(probability_map, key=probability_map.get)
     impairment_probability = probability_map["MCI"] + probability_map["AD"]
     risk_score = float(np.clip(probability_map["MCI"] * 55.0 + probability_map["AD"] * 100.0, 0.0, 100.0))
@@ -295,10 +334,36 @@ def predict_cognitive_status(audio_path: str) -> dict:
         "model_entropy": round(entropy, 4),
         "model_certainty": round(model_certainty, 4),
         "result_message": _message_for(predicted_label, risk_level),
-        "model_source": "normal_mci_ad_task_ALL_vgg16_h5",
-        "model_path": bundle["model_path"],
-        "metadata_path": bundle["metadata_path"],
+        "model_source": model_source,
+        "model_path": model_path,
+        "metadata_path": metadata_path,
     }
+
+
+def predict_cognitive_status(audio_path: str) -> dict:
+    if _lightweight_enabled():
+        probability_map = _probabilities_from_audio_features(audio_path)
+        return _result_from_probabilities(
+            probability_map,
+            model_source="lightweight_acoustic_screening",
+        )
+
+    bundle = _load_model_bundle()
+    array = _audio_to_array(
+        audio_path,
+        bundle["sample_rate"],
+        bundle["seconds"],
+        bundle["image_size"],
+        bundle["dpi"],
+    )
+
+    probability_map = _predict_probabilities(bundle["model"], array, bundle["class_names"])
+    return _result_from_probabilities(
+        probability_map,
+        model_source="normal_mci_ad_task_ALL_vgg16_h5",
+        model_path=bundle["model_path"],
+        metadata_path=bundle["metadata_path"],
+    )
 
 
 def get_model_status() -> dict:

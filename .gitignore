@@ -31,6 +31,10 @@ uploads/
 logs/
 *.log
 
+# Local validation audio and sample assets
+test_data/
+velora-frontend/public/test-assets/
+
 # OS/editor noise
 .DS_Store
 Thumbs.db
