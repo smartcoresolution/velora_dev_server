@@ -377,6 +377,10 @@ def apply_linguistic_adjustment(cognitive_result: dict, linguistic_features: dic
     repeated_ratio = float(linguistic_features.get("repeated_word_ratio", 0.0))
     token_count = int(linguistic_features.get("token_count", 0))
     fluency_markers = int(linguistic_features.get("fluency_marker_count", 0))
+    semantic_impairment = float(linguistic_features.get("semantic_impairment_score", 0.0) or 0.0)
+    semantic_severe = float(linguistic_features.get("semantic_severe_score", 0.0) or 0.0)
+    semantic_mild = float(linguistic_features.get("semantic_mild_score", 0.0) or 0.0)
+    semantic_normal = float(linguistic_features.get("semantic_normal_score", 0.0) or 0.0)
     stt_confidence = float(linguistic_features.get("stt_confidence", 0.0) or 0.0)
     stt_weight = float(np.clip(stt_confidence if stt_confidence > 0 else 0.45, 0.25, 0.75))
 
@@ -388,10 +392,46 @@ def apply_linguistic_adjustment(cognitive_result: dict, linguistic_features: dic
         0.0,
         1.0,
     )
+    semantic_balance = semantic_impairment - semantic_normal
+    combined_language_risk = float(np.clip(language_risk * 0.55 + semantic_impairment * 0.65 - semantic_normal * 0.30, 0.0, 1.0))
     adjustment_strength = 0.18 * stt_weight
     mci_delta = adjustment_strength * language_risk * 0.65
     ad_delta = adjustment_strength * max(0.0, language_risk - 0.45) * 0.35
     normal_delta = adjustment_strength * max(0.0, quality - 0.72) * 0.55
+
+    top_label = max(probabilities, key=probabilities.get)
+    top_probability = float(probabilities[top_label])
+    clear_normal_language = (
+        token_count >= 35
+        and quality >= 0.92
+        and (repeated_ratio <= 0.06 or semantic_normal >= 0.20)
+        and fluency_rate <= 0.035
+        and semantic_impairment <= 0.18
+    )
+    if clear_normal_language and top_label != "AD":
+        low_language_risk = 1.0 - float(np.clip(language_risk / 0.22, 0.0, 1.0))
+        acoustic_uncertainty = float(np.clip((0.72 - top_probability) / 0.32, 0.0, 1.0))
+        normal_delta += 0.35 * stt_weight * low_language_risk * acoustic_uncertainty
+        if semantic_impairment == 0.0 and semantic_normal >= 0.20:
+            normal_delta += 0.16 * stt_weight
+
+    if semantic_balance > 0:
+        semantic_delta = min(0.38, semantic_balance * 0.42) * stt_weight
+        ad_share = float(np.clip(0.18 + semantic_severe * 0.72 - semantic_mild * 0.18, 0.12, 0.82))
+        mci_delta += semantic_delta * (1.0 - ad_share)
+        ad_delta += semantic_delta * ad_share
+        normal_delta -= semantic_delta * 0.32
+        if semantic_severe >= 0.48:
+            ad_delta += min(0.26, (semantic_severe - 0.40) * 0.35) * stt_weight
+        if semantic_severe >= 0.60 and semantic_mild <= 0.10:
+            ad_delta += 0.14 * stt_weight
+        elif semantic_severe >= 0.30 and semantic_mild <= 0.10:
+            ad_delta += 0.34 * stt_weight
+            mci_delta -= 0.12 * stt_weight
+    elif semantic_balance < -0.02 and top_label != "AD":
+        normal_delta += min(0.24, abs(semantic_balance) * 0.34) * stt_weight
+    elif semantic_normal >= 0.20 and semantic_impairment == 0 and top_label != "AD":
+        normal_delta += min(0.18, semantic_normal * 0.35) * stt_weight
 
     adjusted = {
         "Normal": max(0.03, probabilities["Normal"] + normal_delta - mci_delta - ad_delta),
@@ -412,8 +452,14 @@ def apply_linguistic_adjustment(cognitive_result: dict, linguistic_features: dic
         "acoustic_model_probabilities": cognitive_result["model_probabilities"],
         "linguistic_adjustment": {
             "language_risk_score": round(float(language_risk), 4),
+            "combined_language_risk_score": round(float(combined_language_risk), 4),
+            "semantic_impairment_score": round(float(semantic_impairment), 4),
+            "semantic_severe_score": round(float(semantic_severe), 4),
+            "semantic_mild_score": round(float(semantic_mild), 4),
+            "semantic_normal_score": round(float(semantic_normal), 4),
             "adjustment_strength": round(float(adjustment_strength), 4),
             "stt_weight": round(float(stt_weight), 4),
+            "clear_normal_language": clear_normal_language,
         },
     }
 

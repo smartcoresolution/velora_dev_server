@@ -102,6 +102,10 @@ class LinguisticFeatures(BaseModel):
     fluency_marker_count: int
     figurative_expression_count: int
     language_quality_score: float
+    semantic_impairment_score: float = 0.0
+    semantic_severe_score: float = 0.0
+    semantic_mild_score: float = 0.0
+    semantic_normal_score: float = 0.0
     token_count: int = 0
     stt_available: bool = False
     stt_engine: str = "none"
