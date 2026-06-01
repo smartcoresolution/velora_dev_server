@@ -74,6 +74,14 @@ def _extract_lightweight_acoustic_features(y: np.ndarray, sr: int) -> dict:
     }
 
 
+def _lightweight_diarization_seconds() -> float:
+    return float(os.getenv("VELORA_LIGHTWEIGHT_DIARIZATION_SECONDS", "90.0"))
+
+
+def _segment_duration(segments: list[dict]) -> float:
+    return sum(float(segment.get("duration", 0.0) or 0.0) for segment in segments)
+
+
 @router.post("/start/{file_id}", response_model=AnalysisResult)
 async def start_analysis(
     file_id: str,
@@ -135,23 +143,60 @@ async def start_analysis(
 
     # Step 1: Speaker Diarization
     if _lightweight_analysis_enabled():
-        _trace_analysis("lightweight load audio start")
-        y, _ = librosa.load(wav_path, sr=TARGET_SR, duration=30)
-        _trace_analysis(f"lightweight load audio done samples={len(y)}")
-        duration = round(len(y) / TARGET_SR, 2)
-        diarization_result = {
-            "total_speakers": 2 if voice_embedding is not None else 1,
-            "target_speaker": "parent_candidate" if normalized_voice_sample_role == "exclude" else "speaker_A",
-            "target_segments": [{
-                "speaker": "parent_candidate" if normalized_voice_sample_role == "exclude" else "speaker_A",
-                "start_time": 0.0,
-                "end_time": duration,
-                "duration": duration,
-            }],
-            "excluded_segments": [],
-            "diarization_confidence": 0.72 if voice_embedding is not None else 0.65,
-        }
-        target_audio = y
+        if voice_embedding is not None and normalized_voice_sample_role == "exclude":
+            _trace_analysis("lightweight parent-candidate diarization start")
+            diarization_result = perform_speaker_diarization(
+                wav_path,
+                voice_embedding,
+                max_duration=_lightweight_diarization_seconds(),
+            )
+            _trace_analysis("lightweight parent-candidate diarization done")
+            excluded_voice_segments = diarization_result["target_segments"]
+            parent_candidate_segments = diarization_result["excluded_segments"]
+            if _segment_duration(parent_candidate_segments) >= 8.0:
+                diarization_result = {
+                    **diarization_result,
+                    "target_speaker": "parent_candidate",
+                    "target_segments": parent_candidate_segments,
+                    "excluded_segments": excluded_voice_segments,
+                    "diarization_confidence": max(0.62, diarization_result["diarization_confidence"]),
+                }
+                target_audio = extract_target_audio(wav_path, diarization_result["target_segments"])
+            else:
+                _trace_analysis("lightweight parent-candidate fallback first 30s")
+                y, _ = librosa.load(wav_path, sr=TARGET_SR, duration=30)
+                duration = round(len(y) / TARGET_SR, 2)
+                diarization_result = {
+                    "total_speakers": 2,
+                    "target_speaker": "parent_candidate",
+                    "target_segments": [{
+                        "speaker": "parent_candidate",
+                        "start_time": 0.0,
+                        "end_time": duration,
+                        "duration": duration,
+                    }],
+                    "excluded_segments": excluded_voice_segments,
+                    "diarization_confidence": 0.58,
+                }
+                target_audio = y
+        else:
+            _trace_analysis("lightweight load audio start")
+            y, _ = librosa.load(wav_path, sr=TARGET_SR, duration=30)
+            _trace_analysis(f"lightweight load audio done samples={len(y)}")
+            duration = round(len(y) / TARGET_SR, 2)
+            diarization_result = {
+                "total_speakers": 1,
+                "target_speaker": "speaker_A",
+                "target_segments": [{
+                    "speaker": "speaker_A",
+                    "start_time": 0.0,
+                    "end_time": duration,
+                    "duration": duration,
+                }],
+                "excluded_segments": [],
+                "diarization_confidence": 0.65,
+            }
+            target_audio = y
     else:
         _trace_analysis("diarization start")
         diarization_result = perform_speaker_diarization(wav_path, voice_embedding)

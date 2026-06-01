@@ -408,6 +408,11 @@ def apply_linguistic_adjustment(cognitive_result: dict, linguistic_features: dic
 
     top_label = max(probabilities, key=probabilities.get)
     top_probability = float(probabilities[top_label])
+    acoustic_not_strong_impairment = (
+        top_label == "Normal"
+        or top_probability < 0.66
+        or float(probabilities.get("Normal", 0.0)) >= 0.28
+    )
     clear_normal_language = (
         token_count >= 35
         and quality >= 0.92
@@ -428,6 +433,7 @@ def apply_linguistic_adjustment(cognitive_result: dict, linguistic_features: dic
         and semantic_mild == 0.0
         and semantic_normal <= 0.08
         and quality >= 0.55
+        and acoustic_not_strong_impairment
     )
     if clear_normal_language and top_label != "AD":
         low_language_risk = 1.0 - float(np.clip(language_risk / 0.22, 0.0, 1.0))
@@ -455,10 +461,31 @@ def apply_linguistic_adjustment(cognitive_result: dict, linguistic_features: dic
         elif semantic_severe >= 0.30 and semantic_mild <= 0.10:
             ad_delta += 0.34 * stt_weight
             mci_delta -= 0.12 * stt_weight
+        elif semantic_severe >= 0.16 and semantic_mild <= 0.08:
+            ad_delta += 0.40 * stt_weight
+            mci_delta -= 0.08 * stt_weight
     elif semantic_balance < -0.02 and top_label != "AD":
         normal_delta += min(0.24, abs(semantic_balance) * 0.34) * stt_weight
     elif semantic_normal >= 0.20 and semantic_impairment == 0 and top_label != "AD":
         normal_delta += min(0.18, semantic_normal * 0.35) * stt_weight
+
+    if clear_normal_language and semantic_normal >= 0.20 and semantic_impairment <= semantic_normal:
+        normal_delta += 0.38 * stt_weight
+    elif (
+        semantic_normal >= 0.24
+        and semantic_impairment == 0.0
+        and quality >= 0.85
+        and acoustic_not_strong_impairment
+    ):
+        normal_delta += 0.28 * stt_weight
+    elif (
+        neutral_phone_conversation
+        and quality >= 0.90
+        and repeated_ratio <= 0.10
+        and semantic_impairment == 0.0
+        and top_label != "AD"
+    ):
+        normal_delta += 0.34 * stt_weight
 
     adjusted = {
         "Normal": max(0.03, probabilities["Normal"] + normal_delta - mci_delta - ad_delta),

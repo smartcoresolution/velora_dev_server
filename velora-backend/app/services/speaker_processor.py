@@ -7,9 +7,10 @@ TARGET_SR = 16000
 
 def perform_speaker_diarization(
     wav_path: str,
-    voice_sample_embedding: Optional[np.ndarray] = None
+    voice_sample_embedding: Optional[np.ndarray] = None,
+    max_duration: Optional[float] = None,
 ) -> dict:
-    y, sr = librosa.load(wav_path, sr=TARGET_SR)
+    y, sr = librosa.load(wav_path, sr=TARGET_SR, duration=max_duration)
     duration = len(y) / sr
 
     frame_duration = 1.0
@@ -99,6 +100,9 @@ def perform_speaker_diarization(
         else:
             excluded_segs.append(entry)
 
+    target_segs = _merge_segments(target_segs)
+    excluded_segs = _merge_segments(excluded_segs)
+
     silhouette_score = 0.0
     if n_clusters > 1 and len(features) > n_clusters:
         from sklearn.metrics import silhouette_score as sk_silhouette
@@ -116,6 +120,23 @@ def perform_speaker_diarization(
         "excluded_segments": excluded_segs,
         "diarization_confidence": round(confidence, 4),
     }
+
+
+def _merge_segments(segments: list[dict], max_gap: float = 0.25) -> list[dict]:
+    if not segments:
+        return []
+
+    ordered = sorted(segments, key=lambda seg: (seg["start_time"], seg["end_time"]))
+    merged: list[dict] = []
+    for seg in ordered:
+        if not merged or seg["start_time"] > merged[-1]["end_time"] + max_gap:
+            merged.append(dict(seg))
+            continue
+
+        merged[-1]["end_time"] = max(merged[-1]["end_time"], seg["end_time"])
+        merged[-1]["duration"] = round(merged[-1]["end_time"] - merged[-1]["start_time"], 2)
+
+    return merged
 
 
 def extract_target_audio(wav_path: str, target_segments: list[dict]) -> np.ndarray:
