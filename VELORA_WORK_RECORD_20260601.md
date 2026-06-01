@@ -285,3 +285,39 @@ spc_wav/sp_wav: 15/15
 iamwav:         15/15
 pc_wav/p_wav:   4/4 Normal
 ```
+
+## Follow-up Deployment And Commit
+
+The SPC tuning changes were deployed to production and verified.
+
+Deployment steps completed:
+
+```bash
+rsync -a --exclude __pycache__ /root/velora/velora-backend/app/ /opt/velora-prod/backend/app/
+systemctl restart velora-prod-api.service
+```
+
+Health check:
+
+```text
+GET http://127.0.0.1:8010/healthz -> {"status":"ok"}
+```
+
+Production API spot checks after deployment:
+
+```text
+ad_01_repeated_call_dialogue.wav    -> AD,     risk 75.90
+normal_05_outdoor_plan_dialogue.wav -> Normal, risk 46.05
+```
+
+GitHub push completed:
+
+```text
+55901ba Improve SPC parent voice calibration
+```
+
+Final git status after push:
+
+```text
+clean working tree
+```

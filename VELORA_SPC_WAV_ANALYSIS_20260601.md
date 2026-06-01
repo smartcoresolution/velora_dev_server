@@ -379,3 +379,26 @@ VELORA_STT_COMPUTE_TYPE=int8
 VELORA_COGNITIVE_MODEL_PATH=/root/velora/normal_mci_ad_task-ALL_best.h5
 VELORA_COGNITIVE_METADATA_PATH=/root/velora/normal_mci_ad_task-ALL_metadata.json
 ```
+
+## Production Deployment Record
+
+The follow-up implementation was deployed to the production backend and the API was restarted.
+
+Production health check:
+
+```text
+GET http://127.0.0.1:8010/healthz -> {"status":"ok"}
+```
+
+Production API spot checks:
+
+```text
+ad_01_repeated_call_dialogue.wav    -> AD,     risk 75.90
+normal_05_outdoor_plan_dialogue.wav -> Normal, risk 46.05
+```
+
+Committed and pushed to GitHub:
+
+```text
+55901ba Improve SPC parent voice calibration
+```
