@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Bell, PhoneCall, ShieldCheck, UserPlus } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { PhoneCall, ShieldCheck, UserPlus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import SignupPage from './pages/SignupPage'
 import LoginPage from './pages/LoginPage'
@@ -14,6 +14,8 @@ import FollowupPage from './pages/FollowupPage'
 import AdminPage from './pages/AdminPage'
 import HistoryPage from './pages/HistoryPage'
 import AdminLoginPage from './pages/AdminLoginPage'
+import RecordingGuidePage from './pages/RecordingGuidePage'
+import { loginAccount, signupAccount } from './lib/api'
 
 export type AppStep =
   | 'home'
@@ -28,6 +30,7 @@ export type AppStep =
   | 'reliability'
   | 'followup'
   | 'history'
+  | 'recordingGuide'
   | 'adminLogin'
   | 'admin'
 
@@ -74,6 +77,37 @@ const initialState: AppState = {
   adminPassword: '',
   adminError: '',
 }
+
+const appSessionKey = 'velora_app_session'
+
+interface PersistedAppSession {
+  step: AppStep
+  historyBackStep: AppStep
+  resultsBackStep: AppStep
+  consentBackStep: AppStep
+  state: Partial<AppState>
+}
+
+const loadAppSession = (): PersistedAppSession | null => {
+  try {
+    return JSON.parse(sessionStorage.getItem(appSessionKey) || 'null') as PersistedAppSession | null
+  } catch {
+    return null
+  }
+}
+
+const persistableState = (state: AppState): Partial<AppState> => ({
+  consentToken: state.consentToken,
+  email: state.email,
+  ageGroup: state.ageGroup,
+  fileId: state.fileId,
+  voiceSampleId: state.voiceSampleId,
+  voiceSampleDurationSeconds: state.voiceSampleDurationSeconds,
+  verificationType: state.verificationType,
+  analysisId: state.analysisId,
+  analysisResult: state.analysisResult,
+  resultsData: state.resultsData,
+})
 
 const historyKeyFor = (email: string) => `velora_history:${email.trim().toLowerCase()}`
 
@@ -123,14 +157,57 @@ const loadHistoryFor = (email: string) => {
 }
 
 function App() {
-  const initialStep: AppStep = window.location.pathname === '/admin' ? 'adminLogin' : 'home'
+  const restoredSession = loadAppSession()
+  const initialStep: AppStep = window.location.pathname === '/admin' ? 'adminLogin' : restoredSession?.step || 'home'
   const [step, setStep] = useState<AppStep>(initialStep)
-  const [historyBackStep, setHistoryBackStep] = useState<AppStep>('login')
-  const [resultsBackStep, setResultsBackStep] = useState<AppStep>('upload')
-  const [consentBackStep, setConsentBackStep] = useState<AppStep>('signup')
+  const [historyBackStep, setHistoryBackStep] = useState<AppStep>(restoredSession?.historyBackStep || 'login')
+  const [resultsBackStep, setResultsBackStep] = useState<AppStep>(restoredSession?.resultsBackStep || 'upload')
+  const [consentBackStep, setConsentBackStep] = useState<AppStep>(restoredSession?.consentBackStep || 'signup')
   const [, setIsMember] = useState(() => localStorage.getItem('velora_member_ready') === 'true')
   const [history, setHistory] = useState<Array<Record<string, any>>>([])
-  const [state, setState] = useState<AppState>(initialState)
+  const [state, setState] = useState<AppState>({ ...initialState, ...(restoredSession?.state || {}) })
+  const browserHistoryReadyRef = useRef(false)
+  const initialBrowserStepRef = useRef<AppStep>(initialStep)
+
+  useEffect(() => {
+    const url = window.location.href
+    const initialBrowserStep = initialBrowserStepRef.current
+    const baseStep: AppStep = 'home'
+    window.history.replaceState({ veloraApp: true, step: baseStep }, '', url)
+    if (initialBrowserStep !== baseStep) {
+      window.history.pushState({ veloraApp: true, step: initialBrowserStep }, '', url)
+    }
+    browserHistoryReadyRef.current = true
+
+    const handlePopState = (event: PopStateEvent) => {
+      const nextStep = event.state?.veloraApp ? event.state.step as AppStep : 'home'
+      if (nextStep) setStep(nextStep)
+    }
+
+    window.addEventListener('popstate', handlePopState)
+    return () => window.removeEventListener('popstate', handlePopState)
+  }, [])
+
+  useEffect(() => {
+    if (!browserHistoryReadyRef.current) return
+    const currentState = window.history.state as { veloraApp?: boolean; step?: AppStep } | null
+    if (currentState?.veloraApp && currentState.step === step) return
+    window.history.pushState({ veloraApp: true, step }, '', window.location.href)
+  }, [step])
+
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(appSessionKey, JSON.stringify({
+        step,
+        historyBackStep,
+        resultsBackStep,
+        consentBackStep,
+        state: persistableState(state),
+      }))
+    } catch {
+      // Session persistence is best-effort only.
+    }
+  }, [consentBackStep, historyBackStep, resultsBackStep, state, step])
 
   const updateState = (partial: Partial<AppState>) => {
     setState(prev => ({ ...prev, ...partial }))
@@ -188,7 +265,7 @@ function App() {
     setStep('consent')
   }
 
-  const handleSignupComplete = () => {
+  const handleSignupComplete = async () => {
     if (!state.email.trim()) {
       updateState({ signupError: '이메일을 입력해 주세요.' })
       return
@@ -201,47 +278,51 @@ function App() {
       updateState({ signupError: '비밀번호 확인이 일치하지 않습니다.' })
       return
     }
-    localStorage.setItem('velora_member_account', JSON.stringify({
-      email: state.email.trim(),
-      password: state.signupPassword,
-      ageGroup: state.ageGroup || 'other',
-      createdAt: new Date().toISOString(),
-    }))
-    localStorage.setItem('velora_member_ready', 'true')
-    setIsMember(true)
-    setHistory(loadHistoryFor(state.email))
-    updateState({ signupPassword: '', signupPasswordConfirm: '', signupError: '' })
-    setStep('service')
+    try {
+      const account = await signupAccount({
+        email: state.email.trim(),
+        password: state.signupPassword,
+        age_group: state.ageGroup || 'other',
+      })
+      localStorage.setItem('velora_member_ready', 'true')
+      setIsMember(true)
+      setHistory(loadHistoryFor(account.email || state.email))
+      updateState({
+        email: account.email || state.email.trim(),
+        ageGroup: account.age_group || state.ageGroup || 'other',
+        signupPassword: '',
+        signupPasswordConfirm: '',
+        signupError: '',
+      })
+      setStep('service')
+    } catch (error) {
+      updateState({ signupError: error instanceof Error ? error.message : '회원가입 중 오류가 발생했습니다.' })
+    }
   }
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!state.email.trim() || !state.loginPassword.trim()) {
       updateState({ loginError: '이메일과 비밀번호를 입력해 주세요.' })
       return
     }
-    const account = JSON.parse(localStorage.getItem('velora_member_account') || 'null') as null | {
-      email?: string
-      password?: string
-      ageGroup?: string
+    try {
+      const account = await loginAccount({
+        email: state.email.trim(),
+        password: state.loginPassword,
+      })
+      localStorage.setItem('velora_member_ready', 'true')
+      setIsMember(true)
+      setHistory(loadHistoryFor(account.email || state.email))
+      updateState({
+        email: account.email || state.email.trim(),
+        ageGroup: account.age_group || state.ageGroup || 'other',
+        loginPassword: '',
+        loginError: '',
+      })
+      setStep('service')
+    } catch (error) {
+      updateState({ loginError: error instanceof Error ? error.message : '로그인 중 오류가 발생했습니다.' })
     }
-    if (!account) {
-      updateState({ loginError: '가입된 계정이 없습니다. 먼저 회원가입을 진행해 주세요.' })
-      return
-    }
-    if (account.email !== state.email.trim() || account.password !== state.loginPassword) {
-      updateState({ loginError: '이메일 또는 비밀번호가 일치하지 않습니다.' })
-      return
-    }
-    localStorage.setItem('velora_member_ready', 'true')
-    setIsMember(true)
-    setHistory(loadHistoryFor(account.email || ''))
-    updateState({
-      email: account.email || state.email,
-      ageGroup: account.ageGroup || state.ageGroup,
-      loginPassword: '',
-      loginError: '',
-    })
-    setStep('service')
   }
 
   const handleAdminLogin = () => {
@@ -265,8 +346,13 @@ function App() {
     if (step === 'reliability') setStep('results')
     if (step === 'followup') setStep('results')
     if (step === 'history') setStep(historyBackStep)
+    if (step === 'recordingGuide') setStep('service')
     if (step === 'adminLogin') setStep('home')
     if (step === 'admin') setStep('home')
+  }
+
+  const goHome = () => {
+    setStep('home')
   }
 
   const screenTitle = {
@@ -275,13 +361,14 @@ function App() {
     login: '로그인',
     service: '서비스 시작',
     consent: '동의 절차',
-    upload: '새 검증',
+    upload: '부모통화검증',
     selfVoice: '내 목소리 검증',
     analyzing: '통화 음성 분석',
-    results: '검증 결과',
-    reliability: '결과 신뢰도',
+    results: '분석 결과',
+    reliability: '결과 자세히보기',
     followup: '후속 대응 안내',
     history: '지난 검증 이력',
+    recordingGuide: '통화 녹음 가이드',
     adminLogin: '관리자 로그인',
     admin: '관리자 콘솔',
   }[step]
@@ -289,23 +376,25 @@ function App() {
   return (
     <div className="min-h-screen bg-[#eef5f2] px-3 py-4 text-[#143c3d] sm:py-8">
       <div className="mx-auto w-full max-w-[430px] overflow-hidden rounded-[34px] border border-black/10 bg-[#fbfdfb] shadow-2xl shadow-teal-950/10">
-        <div className="flex h-8 items-center justify-between px-7 pt-3 text-[11px] font-semibold text-[#173c3d]">
-          <span>9:41</span>
-          <div className="h-5 w-20 rounded-full bg-black" />
-          <span>LTE</span>
-        </div>
-
         {step !== 'home' && (
           <header className="flex items-center justify-between px-5 pb-2 pt-5">
             <button
               onClick={goBack}
-              className="flex h-9 w-9 items-center justify-center rounded-full text-[#0b7074] hover:bg-[#e8f3f1]"
+              className="flex h-11 w-14 items-center justify-start rounded-full text-[24px] font-black text-[#0b7074] hover:bg-[#e8f3f1]"
               aria-label="이전"
             >
               ←
             </button>
-            <h1 className="text-[17px] font-bold text-[#173c3d]">{screenTitle}</h1>
-            <div className="h-9 w-9" />
+            <h1 className={`${step === 'login' || step === 'selfVoice' || step === 'service' || step === 'consent' || step === 'upload' || step === 'analyzing' || step === 'results' || step === 'reliability' || step === 'recordingGuide' ? 'text-[24px] font-black' : 'text-[17px] font-bold'} text-[#173c3d]`}>
+              {screenTitle}
+            </h1>
+            <button
+              onClick={goHome}
+              className="flex h-11 w-16 items-center justify-end rounded-full text-[17px] font-black text-[#0b7074] hover:bg-[#e8f3f1]"
+              aria-label="처음으로"
+            >
+              처음
+            </button>
           </header>
         )}
 
@@ -313,23 +402,18 @@ function App() {
           {step === 'home' && (
             <section className="flex min-h-[760px] flex-col">
               <div className="flex justify-end pt-5">
-                <button className="flex h-9 w-9 items-center justify-center rounded-full text-[#0b7074] hover:bg-[#e8f3f1]">
-                  <Bell className="h-4 w-4" />
-                </button>
-              </div>
-              <div className="flex justify-end pt-4">
                 <Button
                   variant="outline"
-                  className="h-10 rounded-full border-[#d7e6e2] bg-white px-4 text-[13px] font-black text-[#0f6f73] shadow-none hover:bg-[#f4faf8]"
+                  className="h-12 rounded-full border-[#d7e6e2] bg-white px-5 text-[16px] font-black text-[#0f6f73] shadow-none hover:bg-[#f4faf8]"
                   onClick={() => setStep('signup')}
                 >
-                  <UserPlus className="mr-2 h-4 w-4" />
+                  <UserPlus className="mr-2 h-5 w-5" />
                   회원가입
                 </Button>
               </div>
               <div className="flex flex-1 flex-col items-center justify-center text-center">
-                <p className="text-[34px] font-black tracking-tight text-[#0c7478]">VELORA</p>
-                <p className="mt-2 text-[15px] font-semibold text-[#255a5b]">목소리 속 인지 변화 참고 신호</p>
+                <p className="text-[42px] font-black tracking-tight text-[#0c7478]">VELORA</p>
+                <p className="mt-2 text-[18px] font-black text-[#255a5b]">목소리 속 인지 변화 참고 신호</p>
 
                 <div className="mt-12 flex h-36 w-36 items-center justify-center rounded-full bg-[#d7efea]">
                   <div className="flex h-28 w-28 items-center justify-center rounded-full bg-[#15908e] shadow-lg shadow-teal-800/20">
@@ -337,20 +421,20 @@ function App() {
                   </div>
                 </div>
 
-                <p className="mt-10 whitespace-pre-line text-[15px] font-semibold leading-7 text-[#255a5b]">
+                <p className="mt-10 whitespace-pre-line text-[18px] font-bold leading-[1.55] text-[#255a5b]">
                   부모님과의 통화 또는 내 목소리에서{'\n'}인지기능 변화와 관련된{'\n'}참고 신호를 살펴봅니다.
                 </p>
               </div>
 
               <div className="space-y-3 pb-4">
                 <Button
-                  className="h-14 w-full rounded-full bg-[#0f7d82] text-base font-bold text-white shadow-none hover:bg-[#0b6f74]"
+                  className="h-16 w-full rounded-full bg-[#0f7d82] text-[18px] font-black text-white shadow-none hover:bg-[#0b6f74]"
                   onClick={() => setStep('login')}
                 >
                   서비스 시작
                 </Button>
-                <p className="flex items-center justify-center gap-1 pt-5 text-[11px] text-[#7c9694]">
-                  <ShieldCheck className="h-3.5 w-3.5" />
+                <p className="flex items-center justify-center gap-1 pt-5 text-[14px] font-semibold leading-[1.42] text-[#7c9694]">
+                  <ShieldCheck className="h-4 w-4 shrink-0" />
                   의료 진단이 아닌 비의료적 참고 정보입니다
                 </p>
               </div>
@@ -386,8 +470,11 @@ function App() {
                 setHistoryBackStep('service')
                 setStep('history')
               }}
+              onRecordingGuide={() => setStep('recordingGuide')}
             />
           )}
+
+          {step === 'recordingGuide' && <RecordingGuidePage />}
 
           {step === 'consent' && (
             <ConsentPage

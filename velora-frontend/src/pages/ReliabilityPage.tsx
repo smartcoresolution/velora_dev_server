@@ -1,4 +1,4 @@
-import { Activity, CheckCircle, PhoneCall, ShieldCheck, UserRound, UserRoundMinus } from 'lucide-react'
+import { Activity, CalendarCheck, ClipboardList, RefreshCw, Stethoscope } from 'lucide-react'
 
 interface ReliabilityPageProps {
   resultsData: Record<string, unknown> | null
@@ -10,137 +10,165 @@ const PROBABILITY_LABELS = {
   AD: { label: '치매 관련 위험 신호 높음', color: '#ef4444' },
 }
 
+const PATTERN_LABELS = {
+  Normal: '위험 신호가 적은 패턴',
+  MCI: '가벼운 변화 가능성 패턴',
+  AD: '강한 위험 신호 패턴',
+}
+
+const FEATURE_LABELS = {
+  Normal: '위험 신호가 적은 음성 특징이 보였습니다',
+  MCI: '가벼운 변화 가능성 신호가 일부 보였습니다',
+  AD: '강한 위험 신호는 낮게 나타났습니다',
+}
+
 export default function ReliabilityPage({ resultsData }: ReliabilityPageProps) {
   const analysis = resultsData?.analysis as Record<string, unknown> | undefined
   const isSelfVoice = resultsData?.verification_type === 'self_voice'
-  const voiceSample = resultsData?.voice_sample as Record<string, unknown> | undefined
   const probabilities = analysis?.model_probabilities as Record<string, number> | undefined
-  const features = analysis?.features as Record<string, any> | undefined
-  const speechStats = features?.speech_statistics as Record<string, number> | undefined
-  const linguistic = features?.linguistic_features as Record<string, any> | undefined
-  const confidenceBreakdown = analysis?.confidence_breakdown as Record<string, number> | undefined
-  const confidenceScore = Number(analysis?.confidence_score || 0)
-  const parentSpeechSeconds = Number(speechStats?.total_speech_duration || 0)
-  const audioQualityScore = Number(confidenceBreakdown?.audio_quality_score ?? confidenceScore)
-
-  const toQualityLabel = (score: number) => {
-    if (score >= 0.75) return '양호'
-    if (score >= 0.5) return '보통'
-    return '미흡'
-  }
-
-  const speechLabel = parentSpeechSeconds > 0 ? `${parentSpeechSeconds.toFixed(1)}초` : '확인 필요'
-  const voiceSampleSeconds = Number(voiceSample?.duration_seconds || 0)
-  const voiceSampleLabel = voiceSampleSeconds > 0 ? `${voiceSampleSeconds.toFixed(1)}초` : '20초 이상 권장'
-  const callQualityLabel = toQualityLabel(audioQualityScore)
-  const reliabilityLabel = toQualityLabel(confidenceScore)
-  const languageQuality = Number(linguistic?.language_quality_score || 0)
-  const languageQualityLabel = linguistic?.transcript_available ? toQualityLabel(languageQuality) : '미사용'
-  const sttEngine = String(linguistic?.stt_engine || 'none')
-  const sttConfidence = Math.round(Number(linguistic?.stt_confidence || 0) * 100)
-  const speechStatus = parentSpeechSeconds >= 30 ? '양호' : parentSpeechSeconds > 0 ? '보통' : '미흡'
   const probabilityRows = [
     { name: 'Normal', value: Math.round(Number(probabilities?.Normal || 0) * 100), ...PROBABILITY_LABELS.Normal },
     { name: 'MCI', value: Math.round(Number(probabilities?.MCI || 0) * 100), ...PROBABILITY_LABELS.MCI },
     { name: 'AD', value: Math.round(Number(probabilities?.AD || 0) * 100), ...PROBABILITY_LABELS.AD },
   ]
   const topPattern = probabilityRows.reduce((top, row) => (row.value > top.value ? row : top), probabilityRows[0])
-  const auxiliarySignals = probabilityRows.filter(row => row.name !== topPattern.name && row.value > 0)
+  const auxiliarySignals = probabilityRows
+    .filter(row => row.name !== topPattern.name && row.value > 0)
+    .sort((a, b) => b.value - a.value)
+  const hasMildChangePattern = topPattern.name === 'MCI'
+  const hasStrongRiskPattern = topPattern.name === 'AD'
 
   return (
-    <div className="space-y-5 pt-2">
-      <section className="rounded-[30px] bg-white px-5 py-7 text-center shadow-sm shadow-teal-950/5">
-        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-[#d7efea] text-[#0f7d82]">
-          <Activity className="h-10 w-10" />
+    <div className="space-y-4 pt-1">
+      <section className="rounded-[18px] border border-[#eef3f1] bg-white px-5 py-7 text-center shadow-[0_6px_18px_rgba(15,63,64,0.08)]">
+        <div className="mx-auto flex h-[86px] w-[86px] items-center justify-center rounded-full bg-[#dcefeb] text-[#0f8d8f]">
+          <Activity className="h-12 w-12" />
         </div>
-        <p className="mt-5 text-[21px] font-black text-[#183f40]">결과 신뢰도</p>
-        <p className="mt-2 text-[12px] leading-5 text-[#607b79]">
+        <p className="mt-5 whitespace-pre-line text-[25px] font-black leading-[1.25] text-[#183f40]">
+          이번 결과를{'\n'}어떻게 보면 될까요?
+        </p>
+        <p className="mt-3 text-[15px] font-semibold leading-[1.42] text-[#607b79]">
           {isSelfVoice
-            ? '본인 발화량과 녹음 품질을 기준으로 이번 결과를 얼마나 참고할 수 있는지 보여줍니다.'
-            : '부모 발화량, 자녀 음성 기준, 통화 품질을 기준으로 이번 결과를 얼마나 참고할 수 있는지 보여줍니다.'}
+            ? '본인 발화량, 음성 상태, 녹음 품질 등을 함께 살펴 이번 결과를 얼마나 참고할 수 있는지 쉽게 설명해드립니다.'
+            : '부모님의 말한 양, 음성 상태, 통화 품질 등을 함께 살펴 이번 결과를 얼마나 참고할 수 있는지 쉽게 설명해드립니다.'}
         </p>
       </section>
 
-      <section className="rounded-2xl border border-[#e3ece9] bg-white p-4">
-        <p className="text-[13px] font-black text-[#183f40]">모델 참고 결과</p>
-        <p className="mt-2 text-[12px] leading-5 text-[#607b79]">
-          아래 숫자는 진단 확률이 아니라, 이번 통화 음성이 학습된 음성 패턴 중 어디에 더 가까운지를 보여주는 참고값입니다.
+      <section className="rounded-[18px] bg-white px-4 py-5 shadow-sm shadow-teal-950/5">
+        <p className="text-[18px] font-black text-[#183f40]">AI가 본 이번 음성</p>
+        <p className="mt-2 text-[15px] font-semibold leading-[1.42] text-[#607b79]">
+          아래 수치는 치매 진단 확률이 아닙니다.<br />
+          이번 음성이 어떤 유형에 더 가깝게 나타났는지 보여주는 참고 정보입니다.
         </p>
-        <div className="mt-4 rounded-2xl bg-[#f1f8f6] p-4">
-          <p className="text-[11px] font-bold text-[#7d9593]">가장 가까운 패턴</p>
-          <div className="mt-2 flex items-center justify-between gap-3">
-            <p className="text-[15px] font-black text-[#183f40]">{topPattern.label}</p>
-            <p className="text-[18px] font-black text-[#0f7d82]">{topPattern.value}%</p>
-          </div>
-        </div>
-        <div className="mt-3 rounded-2xl bg-[#fbfdfb] p-4">
-          <p className="text-[11px] font-bold text-[#7d9593]">보조 신호</p>
-          <div className="mt-2 space-y-2">
-            {auxiliarySignals.map(row => (
-              <div key={row.name} className="flex items-center justify-between gap-3 text-[12px] leading-5 text-[#426160]">
-                <span>{row.label} 일부 관찰</span>
-                <span className="font-bold text-[#607b79]">{row.value}%</span>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="mt-3 rounded-2xl bg-[#eef7fb] p-4 text-[12px] leading-5 text-[#426160]">
-          가장 높은 값은 이번 통화에서 가장 가깝게 보인 패턴입니다. 보조 신호는 일부 특징이 함께 보였다는 뜻이며,
-          이것만으로 인지 저하나 치매를 판단하지 않습니다.
-        </div>
-      </section>
 
-      <section className="space-y-3">
-        <div className="flex items-start gap-3 rounded-2xl border border-[#e3ece9] bg-white p-4">
-          {isSelfVoice ? (
-            <UserRound className="mt-0.5 h-5 w-5 shrink-0 text-[#0f7d82]" />
-          ) : (
-            <PhoneCall className="mt-0.5 h-5 w-5 shrink-0 text-[#0f7d82]" />
-          )}
-          <div>
-            <p className="text-[13px] font-black text-[#183f40]">{isSelfVoice ? '본인 발화량' : '부모 발화량'}: {speechStatus}</p>
-            <p className="mt-1 text-[12px] leading-5 text-[#607b79]">
-              이번 분석에 사용된 {isSelfVoice ? '본인 발화량' : '부모님 발화량'}은 {speechLabel}입니다. 음성이 30초 이상 포함되면 결과를 더 안정적으로 참고할 수 있습니다.
+        <div className="mt-4 rounded-[14px] border border-[#cfebe9] bg-[#f0faf8] px-4 py-3">
+          <p className="text-[14px] font-black text-[#0f7d82]">이번 음성과 가장 비슷한 결과</p>
+          <div className="mt-1 flex items-end justify-between gap-3">
+            <p className="min-w-0 text-[20px] font-black leading-[1.25] text-[#183f40]">
+              {PATTERN_LABELS[topPattern.name as keyof typeof PATTERN_LABELS]}
+            </p>
+            <p className="shrink-0 text-[31px] font-black leading-none text-[#0f8d8f]">
+              <span className="mr-1 align-middle text-[14px] font-black">참고값</span>
+              {topPattern.value}
             </p>
           </div>
         </div>
-        {!isSelfVoice && (
-          <div className="flex items-start gap-3 rounded-2xl border border-[#e3ece9] bg-white p-4">
-            <UserRoundMinus className="mt-0.5 h-5 w-5 shrink-0 text-[#0f7d82]" />
-            <div>
-              <p className="text-[13px] font-black text-[#183f40]">자녀 음성 기준: {voiceSampleLabel}</p>
-              <p className="mt-1 text-[12px] leading-5 text-[#607b79]">
-                등록한 자녀 음성은 통화 속 자녀 목소리를 구분하는 기준으로 사용됩니다.
-              </p>
+
+        <p className="mt-4 text-[16px] font-black text-[#183f40]">함께 보인 특징</p>
+        <div className="mt-2 divide-y divide-[#edf3f1]">
+          {auxiliarySignals.map(row => (
+            <div key={row.name} className="flex items-center justify-between gap-3 py-2.5 text-[15px] font-semibold leading-[1.42] text-[#426160]">
+              <span>{FEATURE_LABELS[row.name as keyof typeof FEATURE_LABELS]}</span>
+              <span className="shrink-0 font-black text-[#0f8d8f]">참고값&nbsp; {row.value}</span>
+            </div>
+          ))}
+        </div>
+
+      </section>
+
+      {hasStrongRiskPattern && (
+        <section className="rounded-[18px] border border-[#dbecea] bg-white px-4 py-5 shadow-sm shadow-teal-950/5">
+          <p className="text-[18px] font-black text-[#183f40]">다음에 무엇을 하면 좋을까요?</p>
+          <p className="mt-2 text-[15px] font-semibold leading-[1.42] text-[#607b79]">
+            이번 결과는 진단이 아니라 참고 신호입니다. 다만 강한 위험 신호가 보였기 때문에,
+            같은 조건의 음성을 한 번 더 분석하고 최근 생활 변화를 함께 살펴보는 것이 좋습니다.
+          </p>
+
+          <div className="mt-4 space-y-2">
+            <div className="flex items-start gap-3 rounded-[14px] bg-[#f3faf8] px-4 py-3">
+              <RefreshCw className="mt-0.5 h-6 w-6 shrink-0 text-[#0f8d8f]" />
+              <div>
+                <p className="text-[16px] font-black text-[#183f40]">같은 조건으로 다시 확인하기</p>
+                <p className="mt-1 text-[15px] font-semibold leading-[1.42] text-[#607b79]">
+                  통화 품질, 피로, 주변 소음의 영향을 줄이기 위해 비슷한 길이와 환경의 음성을 한 번 더 분석해 보세요.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3 rounded-[14px] bg-[#f8fbfb] px-4 py-3">
+              <CalendarCheck className="mt-0.5 h-6 w-6 shrink-0 text-[#0f8d8f]" />
+              <div>
+                <p className="text-[16px] font-black text-[#183f40]">최근 생활 변화 살펴보기</p>
+                <p className="mt-1 text-[15px] font-semibold leading-[1.42] text-[#607b79]">
+                  말의 흐름, 기억 착오, 익숙한 일 처리 어려움이 반복되는지 가족과 함께 차분히 확인해 주세요.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3 rounded-[14px] bg-[#fffaf0] px-4 py-3">
+              <Stethoscope className="mt-0.5 h-6 w-6 shrink-0 text-[#c27a12]" />
+              <div>
+                <p className="text-[16px] font-black text-[#183f40]">상담 또는 검사 예약 고려하기</p>
+                <p className="mt-1 text-[15px] font-semibold leading-[1.42] text-[#607b79]">
+                  변화가 반복되거나 걱정이 지속된다면 치매안심센터, 보건소, 신경과 등 전문 상담을 권장합니다.
+                </p>
+              </div>
             </div>
           </div>
-        )}
-        <div className="flex items-start gap-3 rounded-2xl border border-[#e3ece9] bg-white p-4">
-          <Activity className="mt-0.5 h-5 w-5 shrink-0 text-[#0f7d82]" />
-          <div>
-            <p className="text-[13px] font-black text-[#183f40]">언어 보조 신호: {languageQualityLabel}</p>
-            <p className="mt-1 text-[12px] leading-5 text-[#607b79]">
-              {linguistic?.transcript_available
-                ? `STT(${sttEngine})로 전사한 텍스트에서 어휘 다양성, 반복 표현, 머뭇거림 신호를 함께 확인했습니다. STT 신뢰도는 ${sttConfidence}%입니다.`
-                : 'STT 전사가 아직 제공되지 않아 이번 결과에는 언어 보조 신호가 반영되지 않았습니다.'}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-start gap-3 rounded-2xl border border-[#e3ece9] bg-white p-4">
-          <CheckCircle className="mt-0.5 h-5 w-5 shrink-0 text-[#0f7d82]" />
-          <div>
-            <p className="text-[13px] font-black text-[#183f40]">통화 품질: {callQualityLabel}</p>
-            <p className="mt-1 text-[12px] leading-5 text-[#607b79]">
-              주변 소음이 적고 {isSelfVoice ? '내 목소리' : '부모님 목소리'}가 분명할수록 결과 신뢰도가 높아집니다. 이번 결과 신뢰도는 {reliabilityLabel}입니다.
-            </p>
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
-      <p className="flex items-start gap-2 rounded-2xl bg-[#f7fbfa] px-4 py-3 text-[11px] leading-5 text-[#7d9593]">
-        <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-[#0f7d82]" />
-        신뢰도가 낮거나 보통이면 비슷한 조건의 통화를 다시 업로드해 변화 추세를 함께 확인해 주세요.
-      </p>
+      {hasMildChangePattern && (
+        <section className="rounded-[18px] border border-[#dbecea] bg-white px-4 py-5 shadow-sm shadow-teal-950/5">
+          <p className="text-[18px] font-black text-[#183f40]">조금 더 지켜보면 좋은 신호입니다</p>
+          <p className="mt-2 text-[15px] font-semibold leading-[1.42] text-[#607b79]">
+            이번 결과는 진단이 아니라 참고 신호입니다. 가벼운 변화 가능성 패턴이 보였기 때문에,
+            비슷한 조건의 음성을 한 번 더 확인하고 최근 말하기나 기억 관련 변화가 반복되는지 살펴보는 것이 좋습니다.
+          </p>
+
+          <div className="mt-4 space-y-2">
+            <div className="flex items-start gap-3 rounded-[14px] bg-[#f3faf8] px-4 py-3">
+              <RefreshCw className="mt-0.5 h-6 w-6 shrink-0 text-[#0f8d8f]" />
+              <div>
+                <p className="text-[16px] font-black text-[#183f40]">비슷한 조건으로 다시 확인하기</p>
+                <p className="mt-1 text-[15px] font-semibold leading-[1.42] text-[#607b79]">
+                  컨디션이나 녹음 품질의 영향을 줄이기 위해 비슷한 환경에서 한 번 더 분석해 보세요.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3 rounded-[14px] bg-[#f8fbfb] px-4 py-3">
+              <ClipboardList className="mt-0.5 h-6 w-6 shrink-0 text-[#0f8d8f]" />
+              <div>
+                <p className="text-[16px] font-black text-[#183f40]">작은 변화 기록하기</p>
+                <p className="mt-1 text-[15px] font-semibold leading-[1.42] text-[#607b79]">
+                  말이 자주 끊기거나 단어를 찾기 어려워하는 일이 반복되는지 짧게 메모해 보세요.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-3 rounded-[14px] bg-[#f8fbfb] px-4 py-3">
+              <CalendarCheck className="mt-0.5 h-6 w-6 shrink-0 text-[#0f8d8f]" />
+              <div>
+                <p className="text-[16px] font-black text-[#183f40]">필요할 때 상담 고려하기</p>
+                <p className="mt-1 text-[15px] font-semibold leading-[1.42] text-[#607b79]">
+                  변화가 반복되거나 가족이 함께 걱정할 정도라면 전문 상담을 가볍게 고려해 보세요.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
     </div>
   )
 }

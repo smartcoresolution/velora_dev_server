@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { CheckCircle, Download, FileAudio, Info, Mic, Music, Square, UserRound, X } from 'lucide-react'
+import { CheckCircle, Download, FileAudio, Mic, Music, Square, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { uploadAudio } from '@/lib/api'
 
@@ -20,6 +20,31 @@ interface QualityReport {
   rejection_reason: string | null
 }
 
+type FileSystemAccessWindow = Window & {
+  showOpenFilePicker?: (options?: {
+    multiple?: boolean
+    types?: Array<{
+      description: string
+      accept: Record<string, string[]>
+    }>
+  }) => Promise<Array<{ getFile: () => Promise<File> }>>
+}
+
+const audioFileExtensions = ['.m4a', '.mp3', '.wav', '.flac', '.ogg', '.aac', '.wma', '.webm', '.3gp', '.3ga', '.amr']
+const audioInputAccept = audioFileExtensions.join(',')
+const audioPickerAccept: Record<string, string[]> = {
+  'audio/*': audioFileExtensions,
+  'audio/wav': ['.wav'],
+  'audio/x-wav': ['.wav'],
+  'audio/mpeg': ['.mp3'],
+  'audio/mp4': ['.m4a', '.3gp', '.3ga'],
+  'audio/aac': ['.aac'],
+  'audio/ogg': ['.ogg'],
+  'audio/flac': ['.flac'],
+  'audio/webm': ['.webm'],
+  'application/octet-stream': audioFileExtensions,
+}
+
 const SELF_VOICE_SCRIPT = [
   '오늘은 조용한 곳에서 제 목소리를 자연스럽게 녹음하고 있습니다.',
   '아침에는 물을 한 잔 마시고 창밖의 날씨를 살펴보았습니다.',
@@ -38,6 +63,8 @@ export default function SelfVoicePage({ consentToken, onComplete }: SelfVoicePag
   const [recordingPaused, setRecordingPaused] = useState(false)
   const [recordingSeconds, setRecordingSeconds] = useState(0)
   const [voiceDownloadUrl, setVoiceDownloadUrl] = useState('')
+  const [uploadStatus, setUploadStatus] = useState('')
+  const [downloadStatus, setDownloadStatus] = useState('')
   const [error, setError] = useState('')
 
   const voiceInputRef = useRef<HTMLInputElement>(null)
@@ -60,6 +87,8 @@ export default function SelfVoicePage({ consentToken, onComplete }: SelfVoicePag
     setVoiceDownloadUrl(URL.createObjectURL(file))
     setFileId('')
     setQuality(null)
+    setUploadStatus('')
+    setDownloadStatus('')
   }
 
   const clearVoiceFile = () => {
@@ -68,6 +97,8 @@ export default function SelfVoicePage({ consentToken, onComplete }: SelfVoicePag
     setVoiceDownloadUrl('')
     setFileId('')
     setQuality(null)
+    setUploadStatus('')
+    setDownloadStatus('')
   }
 
   const stopTracks = () => {
@@ -93,7 +124,9 @@ export default function SelfVoicePage({ consentToken, onComplete }: SelfVoicePag
       }
       recorder.onstop = () => {
         const blob = new Blob(chunksRef.current, { type: recorder.mimeType || 'audio/webm' })
-        setCurrentVoiceFile(new File([blob], `velora_self_voice_${Date.now()}.webm`, { type: blob.type }))
+        const file = new File([blob], `velora_self_voice_${Date.now()}.webm`, { type: blob.type })
+        setCurrentVoiceFile(file)
+        void handleUpload(file)
         stopTracks()
       }
 
@@ -138,19 +171,52 @@ export default function SelfVoicePage({ consentToken, onComplete }: SelfVoicePag
     }
   }
 
-  const handleUpload = async () => {
-    if (!voiceFile) return
+  const handleUpload = async (selectedFile = voiceFile) => {
+    if (!selectedFile) return
     setUploading(true)
+    setUploadStatus('품질 검증을 진행하고 있습니다.')
     setError('')
     try {
-      const result = await uploadAudio(voiceFile, consentToken)
+      const result = await uploadAudio(selectedFile, consentToken)
       setFileId(result.file_id)
       setQuality(result.quality_report)
+      setUploadStatus(result.quality_report?.quality_pass ? '품질 검증이 완료되었습니다.' : '품질 검증 결과를 확인해 주세요.')
     } catch (e) {
+      setUploadStatus('')
       setError(e instanceof Error ? e.message : '음성 업로드에 실패했습니다.')
     } finally {
       setUploading(false)
     }
+  }
+
+  const openVoiceFileSearch = async () => {
+    setError('')
+    const filePicker = (window as FileSystemAccessWindow).showOpenFilePicker
+    if (filePicker) {
+      try {
+        const [handle] = await filePicker({
+          multiple: false,
+          types: [
+            {
+              description: '음성 파일',
+              accept: audioPickerAccept,
+            },
+          ],
+        })
+        const file = await handle?.getFile()
+        if (file) {
+          setCurrentVoiceFile(file)
+          void handleUpload(file)
+        }
+        return
+      } catch (error) {
+        if (!(error instanceof DOMException && error.name === 'AbortError')) {
+          setError('파일 탐색기를 열지 못했습니다. 브라우저 새로고침 후 다시 시도해 주세요.')
+        }
+        return
+      }
+    }
+    voiceInputRef.current?.click()
   }
 
   const time = `${String(Math.floor(recordingSeconds / 60)).padStart(2, '0')}:${String(recordingSeconds % 60).padStart(2, '0')}`
@@ -158,23 +224,11 @@ export default function SelfVoicePage({ consentToken, onComplete }: SelfVoicePag
 
   return (
     <div className="space-y-5 pt-2">
-      <section className="rounded-2xl border border-[#dce9e6] bg-[#f7fbfa] p-4">
-        <div className="flex items-start gap-3">
-          <UserRound className="mt-0.5 h-5 w-5 shrink-0 text-[#0f7d82]" />
-          <div>
-            <p className="text-[14px] font-black text-[#183f40]">40~50대 본인 목소리 검증</p>
-            <p className="mt-1 text-[12px] leading-5 text-[#607b79]">
-              본인 음성만 녹음하거나 업로드해 인지기능 변화와 관련된 참고 신호를 확인합니다.
-            </p>
-          </div>
-        </div>
-      </section>
-
       <section className="overflow-hidden rounded-[28px] bg-[#0d777c] p-5 text-white shadow-lg shadow-teal-900/15">
-        <div className="rounded-2xl bg-white px-4 py-3 text-[13px] font-bold leading-5 text-[#25494a]">
+        <div className="rounded-2xl bg-white px-4 py-3 text-[15px] font-black leading-6 text-[#25494a]">
           조용한 곳에서 30초 이상 천천히 읽어 주세요.
         </div>
-        <div className="mt-3 space-y-2 rounded-2xl bg-white/12 px-4 py-3 text-[12px] font-semibold leading-5 text-white">
+        <div className="mt-4 space-y-1.5 rounded-2xl bg-white/12 px-4 py-4 text-[16px] font-bold leading-[1.42] text-white">
           {SELF_VOICE_SCRIPT.map(line => (
             <p key={line}>{line}</p>
           ))}
@@ -203,7 +257,7 @@ export default function SelfVoicePage({ consentToken, onComplete }: SelfVoicePag
           <div className="mt-7 grid grid-cols-2 gap-2">
             <Button
               onClick={recordingPaused ? resumeRecording : pauseRecording}
-              className="h-14 rounded-full bg-white/12 text-[14px] font-black text-white shadow-none ring-1 ring-white/30 hover:bg-white/20"
+              className="h-16 rounded-full bg-white/12 text-[17px] font-black text-white shadow-none ring-1 ring-white/30 hover:bg-white/20"
             >
               {recordingPaused ? (
                 <>
@@ -219,7 +273,7 @@ export default function SelfVoicePage({ consentToken, onComplete }: SelfVoicePag
             </Button>
             <Button
               onClick={stopRecording}
-              className="h-14 rounded-full bg-white text-[14px] font-black text-[#0d777c] shadow-none hover:bg-[#eef8f6]"
+              className="h-16 rounded-full bg-white text-[17px] font-black text-[#0d777c] shadow-none hover:bg-[#eef8f6]"
             >
               <CheckCircle className="mr-2 h-4 w-4" />
               녹음 끝내기
@@ -228,9 +282,9 @@ export default function SelfVoicePage({ consentToken, onComplete }: SelfVoicePag
         ) : (
           <Button
             onClick={startRecording}
-            className="mt-7 h-14 w-full rounded-full bg-white text-[15px] font-black text-[#0d777c] shadow-none hover:bg-[#eef8f6]"
+            className="mt-7 h-16 w-full rounded-full bg-white text-[18px] font-black text-[#0d777c] shadow-none hover:bg-[#eef8f6]"
           >
-            <Mic className="mr-2 h-4 w-4" />
+            <Mic className="mr-2 h-5 w-5" />
             내 목소리 녹음
           </Button>
         )}
@@ -238,18 +292,18 @@ export default function SelfVoicePage({ consentToken, onComplete }: SelfVoicePag
         <div className="mt-3 flex gap-2">
           <Button
             variant="outline"
-            className="h-11 flex-1 rounded-full border-white/30 bg-white/10 text-white shadow-none hover:bg-white/20"
-            onClick={() => voiceInputRef.current?.click()}
+            className="h-14 flex-1 rounded-full border-white/30 bg-white/10 text-[17px] font-black text-white shadow-none hover:bg-white/20"
+            onClick={openVoiceFileSearch}
             disabled={recording}
           >
-            <FileAudio className="mr-2 h-4 w-4" />
+            <FileAudio className="mr-2 h-5 w-5" />
             파일 선택
           </Button>
           {voiceFile && (
             <Button
-              onClick={handleUpload}
-              disabled={uploading || recording}
-              className="h-11 rounded-full bg-white px-5 font-black text-[#0d777c] shadow-none hover:bg-[#eef8f6]"
+              onClick={() => handleUpload()}
+              disabled={uploading || recording || Boolean(fileId)}
+              className="h-14 rounded-full bg-white px-5 text-[17px] font-black text-[#0d777c] shadow-none hover:bg-[#eef8f6]"
             >
               {fileId ? '확인 완료' : uploading ? '확인 중' : '품질 확인'}
             </Button>
@@ -260,11 +314,19 @@ export default function SelfVoicePage({ consentToken, onComplete }: SelfVoicePag
           <a
             href={voiceDownloadUrl}
             download={voiceFile.name}
-            className="mt-3 flex h-11 w-full items-center justify-center rounded-full border border-white/25 bg-white/10 text-[13px] font-black text-white hover:bg-white/20"
+            onClick={() => {
+              setDownloadStatus('저장 요청을 보냈습니다. 다운로드 폴더 또는 브라우저 다운로드 목록에서 파일을 확인해 주세요.')
+            }}
+            className="mt-3 flex h-14 w-full items-center justify-center rounded-full border border-white/25 bg-white/10 text-[16px] font-black text-white hover:bg-white/20"
           >
-            <Download className="mr-2 h-4 w-4" />
-            녹음한 내 목소리 다운로드
+            <Download className="mr-2 h-5 w-5" />
+            내 기기에 저장하기
           </a>
+        )}
+        {downloadStatus && (
+          <p className="mt-3 rounded-xl bg-white/10 px-4 py-3 text-center text-[15px] font-bold leading-6 text-white">
+            {downloadStatus}
+          </p>
         )}
       </section>
 
@@ -272,15 +334,15 @@ export default function SelfVoicePage({ consentToken, onComplete }: SelfVoicePag
         {voiceFile && (
           <div className="mb-4 rounded-2xl bg-[#f1f8f6] p-4">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#0f7d82] text-white">
-                <Music className="h-5 w-5" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-[#0f7d82] text-white">
+                <Music className="h-6 w-6" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[13px] font-black text-[#183f40]">{voiceFile.name}</p>
-                <p className="text-[11px] text-[#6f8785]">{(voiceFile.size / 1024 / 1024).toFixed(1)}MB</p>
+                <p className="truncate text-[15px] font-black text-[#183f40]">{voiceFile.name}</p>
+                <p className="text-[13px] font-semibold text-[#6f8785]">{(voiceFile.size / 1024 / 1024).toFixed(1)}MB</p>
               </div>
               <button onClick={clearVoiceFile} className="text-[#7d9593]">
-                <X className="h-4 w-4" />
+                <X className="h-5 w-5" />
               </button>
             </div>
           </div>
@@ -288,45 +350,51 @@ export default function SelfVoicePage({ consentToken, onComplete }: SelfVoicePag
 
         {quality && (
           <div className={`rounded-2xl p-4 ${quality.quality_pass ? 'bg-[#edf8f4]' : 'bg-red-50'}`}>
-            <p className={`text-[13px] font-black ${quality.quality_pass ? 'text-[#0f7d82]' : 'text-red-600'}`}>
+            <p className={`text-[16px] font-black ${quality.quality_pass ? 'text-[#0f7d82]' : 'text-red-600'}`}>
               {quality.quality_pass ? '품질 검증 통과' : '품질 검증 실패'}
             </p>
-            <p className="mt-2 text-[12px] text-[#6f8785]">
+            <p className="mt-2 text-[14px] font-semibold leading-6 text-[#6f8785]">
               길이 {quality.duration_seconds.toFixed(1)}초 · SNR {quality.snr_db.toFixed(1)}dB · 무음 {(quality.silence_ratio * 100).toFixed(1)}%
             </p>
-            {quality.rejection_reason && <p className="mt-2 text-[12px] text-red-600">{quality.rejection_reason}</p>}
+            {quality.rejection_reason && <p className="mt-2 text-[14px] font-semibold leading-6 text-red-600">{quality.rejection_reason}</p>}
           </div>
+        )}
+        {uploadStatus && (
+          <p className="mt-3 rounded-xl bg-[#eef7fb] px-4 py-3 text-center text-[15px] font-bold leading-6 text-[#426160]">
+            {uploadStatus}
+          </p>
         )}
 
         <input
           ref={voiceInputRef}
           type="file"
-          accept=".m4a,.mp3,.wav,.flac,.ogg,.aac,.wma,.webm,.mp4,audio/*"
+          accept={audioInputAccept}
           className="hidden"
+          onClick={e => {
+            e.currentTarget.value = ''
+          }}
           onChange={e => {
             const file = e.target.files?.[0]
-            if (file) setCurrentVoiceFile(file)
+            if (file) {
+              setCurrentVoiceFile(file)
+              void handleUpload(file)
+            }
           }}
         />
-
-        <div className="mt-4 flex items-start gap-2 rounded-xl bg-[#eef7fb] px-3 py-3 text-[12px] leading-5 text-[#426160]">
-          <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#0f7d82]" />
-          본인검증은 자녀 음성 샘플이 필요하지 않습니다. 업로드된 원본과 분석용 임시 음성은 분석 후 삭제되는 것을 원칙으로 합니다.
-        </div>
       </section>
 
-      {error && <p className="rounded-xl bg-red-50 px-3 py-2 text-center text-[12px] font-semibold text-red-600">{error}</p>}
+      {error && <p className="rounded-xl bg-red-50 px-4 py-3 text-center text-[15px] font-bold leading-6 text-red-600">{error}</p>}
 
       <Button
         onClick={() => onComplete(fileId, quality?.duration_seconds || recordingSeconds || 0)}
         disabled={!canProceed}
-        className="h-14 w-full rounded-full bg-[#0f7d82] text-[15px] font-bold text-white shadow-none hover:bg-[#0b6f74]"
+        className="h-16 w-full rounded-full bg-[#0f7d82] text-[18px] font-black text-white shadow-none hover:bg-[#0b6f74]"
       >
         분석 시작
       </Button>
 
-      <p className="flex items-center justify-center gap-1 text-[11px] text-[#8aa09e]">
-        <CheckCircle className="h-3.5 w-3.5" />
+      <p className="flex items-center justify-center gap-1 text-[14px] font-semibold leading-5 text-[#8aa09e]">
+        <CheckCircle className="h-4 w-4 shrink-0" />
         의료 진단이 아닌 비의료적 참고 정보로 결과를 제공합니다.
       </p>
     </div>
