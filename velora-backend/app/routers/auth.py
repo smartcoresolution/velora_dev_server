@@ -38,6 +38,13 @@ class AuthResponse(BaseModel):
 def ensure_auth_schema() -> None:
     try:
         execute_many([
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS email text",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash text",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS role text NOT NULL DEFAULT 'user'",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'active'",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_changed_at timestamptz",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS last_login_at timestamptz",
+            "ALTER TABLE users ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now()",
             "CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_unique ON users (lower(email)) WHERE email IS NOT NULL",
         ])
     except SQLAlchemyError:
@@ -85,7 +92,7 @@ async def signup(request: AuthRequest):
     email = normalize_email(request.email)
     existing = fetch_one(
         """
-        SELECT id
+        SELECT id, email, password_hash, age_group, status
         FROM users
         WHERE lower(email) = :email
           AND status != 'withdrawn'
@@ -93,7 +100,32 @@ async def signup(request: AuthRequest):
         {"email": email},
     )
     if existing:
-        raise HTTPException(status_code=409, detail="이미 가입된 이메일입니다. 로그인해 주세요.")
+        if existing.get("password_hash"):
+            raise HTTPException(status_code=409, detail="이미 가입된 이메일입니다. 로그인해 주세요.")
+        if existing.get("status") == "locked":
+            raise HTTPException(status_code=403, detail="잠긴 계정입니다.")
+        execute(
+            """
+            UPDATE users
+            SET password_hash = :password_hash,
+                age_group = COALESCE(age_group, :age_group),
+                status = 'active',
+                password_changed_at = now(),
+                updated_at = now()
+            WHERE id = CAST(:user_id AS uuid)
+            """,
+            {
+                "user_id": str(existing["id"]),
+                "password_hash": hash_password(request.password),
+                "age_group": request.age_group.value,
+            },
+        )
+        return AuthResponse(
+            user_id=str(existing["id"]),
+            email=existing["email"],
+            age_group=existing["age_group"] or request.age_group.value,
+            message="기존 계정의 비밀번호가 설정되었습니다.",
+        )
 
     row = insert_returning(
         """

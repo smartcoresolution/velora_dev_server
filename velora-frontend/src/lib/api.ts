@@ -30,14 +30,10 @@ async function tryFetch(url: string, init?: RequestInit, timeoutMs = 0): Promise
       ...init,
       signal: controller?.signal ?? init?.signal,
     });
-    if (res.status === 401) throw new Error("auth");
     return res;
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") {
       throw new Error("서버 응답이 지연되고 있습니다. 파일 크기나 네트워크 상태를 확인한 뒤 다시 시도해 주세요.");
-    }
-    if (error instanceof Error && error.message === "auth") {
-      throw error;
     }
     throw new Error("서버와 연결할 수 없습니다. 백엔드 실행 상태와 API 주소를 확인해 주세요.");
   } finally {
