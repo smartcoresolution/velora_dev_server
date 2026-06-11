@@ -19,19 +19,46 @@ const DEMO_POLICY = {
   ],
 };
 
-async function tryFetch(url: string, init?: RequestInit): Promise<Response> {
+async function tryFetch(url: string, init?: RequestInit, timeoutMs = 0): Promise<Response> {
+  const controller = timeoutMs > 0 ? new AbortController() : null;
+  const timeoutId = controller
+    ? window.setTimeout(() => controller.abort(), timeoutMs)
+    : null;
+
   try {
-    const res = await fetch(url, init);
+    const res = await fetch(url, {
+      ...init,
+      signal: controller?.signal ?? init?.signal,
+    });
     if (res.status === 401) throw new Error("auth");
-    const ct = res.headers.get("content-type") || "";
-    if (!ct.includes("application/json")) throw new Error("not-json");
     return res;
   } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error("서버 응답이 지연되고 있습니다. 파일 크기나 네트워크 상태를 확인한 뒤 다시 시도해 주세요.");
+    }
     if (error instanceof Error && error.message === "auth") {
       throw error;
     }
     throw new Error("서버와 연결할 수 없습니다. 백엔드 실행 상태와 API 주소를 확인해 주세요.");
+  } finally {
+    if (timeoutId) window.clearTimeout(timeoutId);
   }
+}
+
+async function responseErrorMessage(res: Response, fallback: string): Promise<string> {
+  const contentType = res.headers.get("content-type") || "";
+  if (contentType.includes("application/json")) {
+    try {
+      const err = await res.json();
+      return err.detail || err.message || fallback;
+    } catch {
+      return fallback;
+    }
+  }
+  if (res.status === 413) return "파일 크기가 서버 허용 범위를 초과했습니다. 더 짧은 파일로 다시 시도해 주세요.";
+  if (res.status === 415) return "지원하지 않는 음성 파일 형식입니다. m4a, wav, mp3, 3ga, amr 파일로 다시 시도해 주세요.";
+  if (res.status >= 500) return "서버에서 파일 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.";
+  return `${fallback} (HTTP ${res.status})`;
 }
 
 // ---------- public API ----------
@@ -70,6 +97,39 @@ export async function submitConsent(data: {
   }
 }
 
+export async function signupAccount(data: {
+  email: string;
+  password: string;
+  age_group: string;
+}) {
+  const res = await tryFetch(`${API_URL}/api/auth/signup`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.detail || "Signup failed");
+  }
+  return res.json();
+}
+
+export async function loginAccount(data: {
+  email: string;
+  password: string;
+}) {
+  const res = await tryFetch(`${API_URL}/api/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.detail || "Login failed");
+  }
+  return res.json();
+}
+
 export async function uploadAudio(file: File, consentToken: string) {
   const formData = new FormData();
   formData.append("file", file);
@@ -78,10 +138,9 @@ export async function uploadAudio(file: File, consentToken: string) {
       method: "POST",
       headers: { "X-Consent-Token": consentToken },
       body: formData,
-    });
+    }, 180000);
     if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.detail || "Upload failed");
+      throw new Error(await responseErrorMessage(res, "통화 파일 업로드에 실패했습니다."));
     }
     return res.json();
   } catch (error) {
@@ -97,10 +156,9 @@ export async function uploadVoiceSample(file: File, consentToken: string) {
       method: "POST",
       headers: { "X-Consent-Token": consentToken },
       body: formData,
-    });
+    }, 180000);
     if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.detail || "Voice sample upload failed");
+      throw new Error(await responseErrorMessage(res, "자녀 음성 등록에 실패했습니다."));
     }
     return res.json();
   } catch (error) {

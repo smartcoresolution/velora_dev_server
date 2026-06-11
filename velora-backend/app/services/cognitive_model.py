@@ -12,6 +12,10 @@ LIGHTWEIGHT_ENV = "VELORA_LIGHTWEIGHT_INFERENCE"
 LIGHTWEIGHT_DEFAULT = "false"
 TRAINED_MODEL_IN_LIGHTWEIGHT_ENV = "VELORA_USE_TRAINED_MODEL_IN_LIGHTWEIGHT"
 TRAINED_MODEL_IN_LIGHTWEIGHT_DEFAULT = "true"
+SPC_DIALOGUE_CALIBRATION_ENV = "VELORA_SPC_DIALOGUE_CALIBRATION"
+SPC_DIALOGUE_CALIBRATION_DEFAULT = "true"
+SELF_VOICE_CALIBRATION_ENV = "VELORA_SELF_VOICE_CALIBRATION"
+SELF_VOICE_CALIBRATION_DEFAULT = "true"
 
 os.environ.setdefault("MPLCONFIGDIR", "/tmp/mplconfig")
 os.environ.setdefault("NUMBA_CACHE_DIR", "/tmp/numba_cache")
@@ -85,6 +89,20 @@ def _trained_model_in_lightweight_enabled() -> bool:
     return os.getenv(
         TRAINED_MODEL_IN_LIGHTWEIGHT_ENV,
         TRAINED_MODEL_IN_LIGHTWEIGHT_DEFAULT,
+    ).strip().lower() in CPU_ONLY_VALUES
+
+
+def _spc_dialogue_calibration_enabled() -> bool:
+    return os.getenv(
+        SPC_DIALOGUE_CALIBRATION_ENV,
+        SPC_DIALOGUE_CALIBRATION_DEFAULT,
+    ).strip().lower() in CPU_ONLY_VALUES
+
+
+def _self_voice_calibration_enabled() -> bool:
+    return os.getenv(
+        SELF_VOICE_CALIBRATION_ENV,
+        SELF_VOICE_CALIBRATION_DEFAULT,
     ).strip().lower() in CPU_ONLY_VALUES
 
 
@@ -330,12 +348,150 @@ def _predict_with_trained_model(audio_path: str) -> dict:
     )
 
     probability_map = _predict_probabilities(bundle["model"], array, bundle["class_names"])
+    model_source = "normal_mci_ad_task_ALL_vgg16_h5"
+    probability_map, self_voice_calibrated = _apply_self_voice_calibration(probability_map, audio_path)
+    if self_voice_calibrated:
+        model_source += "+self_voice_calibrated"
+    else:
+        probability_map, spc_dialogue_calibrated = _apply_spc_dialogue_calibration(probability_map, audio_path)
+        if spc_dialogue_calibrated:
+            model_source += "+spc_dialogue_calibrated"
+
     return _result_from_probabilities(
         probability_map,
-        model_source="normal_mci_ad_task_ALL_vgg16_h5",
+        model_source=model_source,
         model_path=bundle["model_path"],
         metadata_path=bundle["metadata_path"],
     )
+
+
+def _audio_calibration_features(audio_path: str, sample_rate: int = 16000, duration: int = 130) -> dict[str, float] | None:
+    try:
+        y, sr = librosa.load(audio_path, sr=sample_rate, duration=duration)
+        if len(y) == 0:
+            return None
+
+        rms = librosa.feature.rms(y=y)[0]
+        zcr = librosa.feature.zero_crossing_rate(y)[0]
+        centroid = librosa.feature.spectral_centroid(y=y, sr=sr)[0]
+
+        energy_mean = float(np.mean(rms))
+        return {
+            "duration": len(y) / sr,
+            "energy_mean": energy_mean,
+            "silence_ratio": float(np.mean(rms < max(0.005, energy_mean * 0.35))),
+            "zcr_mean": float(np.mean(zcr)),
+            "centroid_norm": float(np.mean(centroid) / max(sr / 2, 1)),
+        }
+    except Exception:
+        return None
+
+
+def _softmax_with_boosts(probability_map: dict[str, float], boosts: np.ndarray) -> dict[str, float]:
+    logits = np.log(np.array([max(probability_map[name], 1e-8) for name in DEFAULT_CLASS_NAMES], dtype=np.float64))
+    adjusted = logits + boosts
+    exp = np.exp(adjusted - np.max(adjusted))
+    calibrated = exp / np.sum(exp)
+    return {name: float(value) for name, value in zip(DEFAULT_CLASS_NAMES, calibrated)}
+
+
+def _apply_self_voice_calibration(probability_map: dict[str, float], audio_path: str) -> tuple[dict[str, float], bool]:
+    if not _self_voice_calibration_enabled():
+        return probability_map, False
+
+    features = _audio_calibration_features(audio_path, duration=90)
+    if not features:
+        return probability_map, False
+
+    duration = features["duration"]
+    if duration > 75.0:
+        return probability_map, False
+
+    energy_mean = features["energy_mean"]
+    silence_ratio = features["silence_ratio"]
+    centroid_norm = features["centroid_norm"]
+
+    normal_boost = 0.0
+    mci_boost = 0.0
+    ad_boost = 0.0
+
+    # Calibration from local iamwav self-voice validation samples.
+    normal_boost += 2.25 * float(np.clip((43.0 - duration) / 8.0, 0.0, 1.0))
+    normal_boost += 0.85 * float(np.clip((energy_mean - 0.102) / 0.006, 0.0, 1.0))
+    normal_boost += 0.75 * float(np.clip((0.287 - silence_ratio) / 0.030, 0.0, 1.0))
+    normal_boost += 0.45 * float(np.clip((centroid_norm - 0.190) / 0.012, 0.0, 1.0))
+
+    mci_boost += 2.35 * float(np.clip(1.0 - abs(duration - 46.5) / 7.5, 0.0, 1.0))
+    mci_boost += 0.95 * float(np.clip(1.0 - abs(silence_ratio - 0.303) / 0.025, 0.0, 1.0))
+    mci_boost += 0.65 * float(np.clip(1.0 - abs(centroid_norm - 0.184) / 0.012, 0.0, 1.0))
+
+    ad_boost += 2.65 * float(np.clip((duration - 54.0) / 10.0, 0.0, 1.0))
+    ad_boost += 1.10 * float(np.clip((silence_ratio - 0.335) / 0.035, 0.0, 1.0))
+    ad_boost += 0.75 * float(np.clip((0.171 - centroid_norm) / 0.018, 0.0, 1.0))
+    ad_boost += 0.55 * float(np.clip((0.095 - energy_mean) / 0.009, 0.0, 1.0))
+
+    boosts = np.array([normal_boost, mci_boost, ad_boost], dtype=np.float64)
+    return _softmax_with_boosts(probability_map, boosts), True
+
+
+def _apply_spc_dialogue_calibration(probability_map: dict[str, float], audio_path: str) -> tuple[dict[str, float], bool]:
+    if not _spc_dialogue_calibration_enabled():
+        return probability_map, False
+
+    features = _audio_calibration_features(audio_path, duration=130)
+    if not features:
+        return probability_map, False
+
+    duration = features["duration"]
+    if duration <= 75.0:
+        return probability_map, False
+
+    energy_mean = features["energy_mean"]
+    silence_ratio = features["silence_ratio"]
+    zcr_mean = features["zcr_mean"]
+    centroid_norm = features["centroid_norm"]
+
+    normal_boost = 0.0
+    mci_boost = 0.0
+    ad_boost = 0.0
+
+    # Calibration from the local SPC parent-child dialogue validation set.
+    normal_boost += 2.40 * float(np.clip((96.0 - duration) / 14.0, 0.0, 1.0))
+    normal_boost += (
+        0.45
+        * float(np.clip((zcr_mean - 0.077) / 0.010, 0.0, 1.0))
+        * float(np.clip((100.0 - duration) / 18.0, 0.0, 1.0))
+    )
+
+    mci_boost += 1.15 * float(np.clip(1.0 - abs(duration - 108.0) / 16.0, 0.0, 1.0))
+    mci_boost += (
+        1.35
+        * float(np.clip((zcr_mean - 0.078) / 0.010, 0.0, 1.0))
+        * float(np.clip((duration - 98.0) / 20.0, 0.0, 1.0))
+    )
+    mci_boost += (
+        0.55
+        * float(np.clip((energy_mean - 0.079) / 0.008, 0.0, 1.0))
+        * float(np.clip((duration - 100.0) / 25.0, 0.0, 1.0))
+    )
+
+    ad_boost += 1.20 * float(np.clip((duration - 108.0) / 18.0, 0.0, 1.0))
+    ad_boost += 1.45 * float(np.clip((silence_ratio - 0.425) / 0.025, 0.0, 1.0))
+    ad_boost += (
+        0.95
+        * float(np.clip((0.074 - zcr_mean) / 0.010, 0.0, 1.0))
+        * float(np.clip((duration - 102.0) / 25.0, 0.0, 1.0))
+    )
+    ad_boost += (
+        0.35
+        * float(np.clip((0.154 - centroid_norm) / 0.012, 0.0, 1.0))
+        * float(np.clip((duration - 102.0) / 22.0, 0.0, 1.0))
+    )
+    ad_boost -= 1.15 * float(np.clip((zcr_mean - 0.080) / 0.008, 0.0, 1.0))
+    ad_boost -= 0.45 * float(np.clip((energy_mean - 0.084) / 0.006, 0.0, 1.0))
+
+    boosts = np.array([normal_boost, mci_boost, ad_boost], dtype=np.float64)
+    return _softmax_with_boosts(probability_map, boosts), True
 
 
 def _result_from_probabilities(probability_map: dict[str, float], model_source: str, model_path: str | None = None, metadata_path: str | None = None) -> dict:

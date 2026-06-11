@@ -12,6 +12,7 @@ interface AdminLoginPageProps {
 
 export default function AdminLoginPage({ adminId, adminPassword, error, onChange, onSubmit, onBack }: AdminLoginPageProps) {
   const inputClass = "h-[52px] w-full rounded-xl border border-[#e3ece9] bg-white px-11 text-[14px] font-medium text-[#183f40] shadow-sm shadow-teal-950/5 outline-none transition focus:border-[#0f7d82] focus:ring-2 focus:ring-[#d7efea]"
+  const maskedInputClass = `${inputClass} [-webkit-text-security:disc]`
 
   return (
     <div className="flex min-h-[700px] flex-col justify-center pt-2">
@@ -25,6 +26,8 @@ export default function AdminLoginPage({ adminId, adminPassword, error, onChange
           <label className="relative block">
             <User className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#0f7d82]" />
             <input
+              autoComplete="off"
+              name="velora-admin-id"
               value={adminId}
               onChange={event => onChange({ adminId: event.target.value, adminError: '' })}
               className={inputClass}
@@ -34,10 +37,15 @@ export default function AdminLoginPage({ adminId, adminPassword, error, onChange
           <label className="relative block">
             <Lock className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#0f7d82]" />
             <input
-              type="password"
+              type="text"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="none"
+              spellCheck={false}
+              name="velora-admin-code"
               value={adminPassword}
               onChange={event => onChange({ adminPassword: event.target.value, adminError: '' })}
-              className={inputClass}
+              className={maskedInputClass}
               placeholder="Password"
             />
           </label>

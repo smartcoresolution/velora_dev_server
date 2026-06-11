@@ -5,7 +5,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from app.routers import admin, consent, upload, analysis, results
+from app.routers import admin, auth, consent, upload, analysis, results
 
 app = FastAPI(
     title="VELORA API",
@@ -23,6 +23,7 @@ app.add_middleware(
 )
 
 app.include_router(consent.router, prefix="/api/consent", tags=["Consent & Governance"])
+app.include_router(auth.router, prefix="/api/auth", tags=["Test Auth"])
 app.include_router(upload.router, prefix="/api/upload", tags=["Upload & Quality Check"])
 app.include_router(analysis.router, prefix="/api/analysis", tags=["Analysis Pipeline"])
 app.include_router(results.router, prefix="/api/results", tags=["Results & Guidance"])

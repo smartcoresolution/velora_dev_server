@@ -219,6 +219,9 @@ async def start_analysis(
     _trace_analysis("write target audio start")
     sf.write(target_audio_path, target_audio, TARGET_SR)
     _trace_analysis("write target audio done")
+    cognitive_audio_path = target_audio_path
+    if voice_embedding is not None and normalized_voice_sample_role == "exclude":
+        cognitive_audio_path = wav_path
 
     # Step 3: Extract speech statistics
     speech_stats = extract_speech_statistics(target_audio, TARGET_SR)
@@ -262,7 +265,7 @@ async def start_analysis(
     # Step 7: Run trained Normal/MCI/AD model and apply STT linguistic signal
     try:
         _trace_analysis("cognitive prediction start")
-        cognitive_result = predict_cognitive_status(target_audio_path)
+        cognitive_result = predict_cognitive_status(cognitive_audio_path)
         cognitive_result = apply_linguistic_adjustment(cognitive_result, linguistic_features)
         _trace_analysis("cognitive prediction done")
     except CognitiveModelUnavailable as exc:

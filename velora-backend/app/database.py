@@ -41,6 +41,14 @@ def execute(query: str, params: dict[str, Any] | None = None) -> None:
         conn.execute(text(query), params or {})
 
 
+def execute_many(statements: list[str]) -> None:
+    if not is_database_configured():
+        return
+    with get_engine().begin() as conn:
+        for statement in statements:
+            conn.execute(text(statement))
+
+
 def insert_returning(query: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
     with get_engine().begin() as conn:
         row = conn.execute(text(query), params or {}).mappings().one()

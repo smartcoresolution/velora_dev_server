@@ -19,6 +19,7 @@ os.makedirs(VOICE_SAMPLES_DIR, exist_ok=True)
 
 TARGET_SR = 16000
 MIN_DURATION = float(os.getenv("VELORA_MIN_AUDIO_DURATION", "30.0"))
+MAX_DURATION = float(os.getenv("VELORA_MAX_AUDIO_DURATION", "180.0"))
 MAX_SILENCE_RATIO = float(os.getenv("VELORA_MAX_SILENCE_RATIO", "0.85"))
 MIN_SNR_DB = float(os.getenv("VELORA_MIN_SNR_DB", "5.0"))
 
@@ -60,6 +61,17 @@ def convert_to_standard_wav(input_path: str, file_id: str) -> str:
 def _convert_with_librosa(input_path: str, output_path: str) -> None:
     y, _ = librosa.load(input_path, sr=TARGET_SR, mono=True)
     sf.write(output_path, y, TARGET_SR, subtype="PCM_16")
+
+
+def trim_wav_to_duration(wav_path: str, max_duration_seconds: float) -> tuple[float, bool]:
+    y, sr = librosa.load(wav_path, sr=TARGET_SR, mono=True)
+    original_duration = len(y) / sr
+    if original_duration <= max_duration_seconds:
+        return original_duration, False
+
+    max_samples = int(max_duration_seconds * sr)
+    sf.write(wav_path, y[:max_samples], sr, subtype="PCM_16")
+    return original_duration, True
 
 
 def compute_snr(y: np.ndarray) -> float:

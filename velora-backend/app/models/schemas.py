@@ -46,6 +46,9 @@ class QualityReport(BaseModel):
     format_original: str
     quality_pass: bool
     rejection_reason: Optional[str] = None
+    original_duration_seconds: Optional[float] = None
+    trimmed_to_seconds: Optional[float] = None
+    was_trimmed: bool = False
 
 
 class UploadResponse(BaseModel):
@@ -185,4 +188,7 @@ class AnalysisStatusResponse(BaseModel):
 class VoiceSampleResponse(BaseModel):
     sample_id: str
     duration_seconds: float
+    original_duration_seconds: Optional[float] = None
+    trimmed_to_seconds: Optional[float] = None
+    was_trimmed: bool = False
     message: str
